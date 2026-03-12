@@ -1,0 +1,10 @@
+# http://editorconfig.org
+root = true
+
+[*]
+indent_style = space          # 들여쓰기는 스페이스로
+indent_size = 2               # 기본 2칸 (Next.js 표준)
+end_of_line = lf              # 줄바꿈 방식 통일 (Mac/Win 혼용 방지)
+charset = utf-8               # 인코딩 통일
+trim_trailing_whitespace = true # 줄 끝의 불필요한 공백 제거
+insert_final_newline = true    # 파일 끝에 빈 줄 추가
