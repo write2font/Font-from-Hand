@@ -4,6 +4,8 @@ import com.example.backend.dto.SignInRequest;
 import com.example.backend.dto.SignUpRequest;
 import com.example.backend.service.AuthService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -25,7 +27,31 @@ public class AuthController {
 
   @PostMapping("/signin")
   public ResponseEntity<String> signIn(@RequestBody SignInRequest request) {
-    // JWT를 만든 후에 연결
-    return ResponseEntity.ok("로그인 요청을 확인했습니다.");
+    String token = authService.signIn(request);
+
+    ResponseCookie cookie = ResponseCookie.from("accessToken", token)
+      .httpOnly(true)
+      .secure(false)
+      .path("/")
+      .maxAge(60 * 60)
+      .sameSite("Lax")
+      .build();
+
+    return ResponseEntity.ok()
+      .header(HttpHeaders.SET_COOKIE, cookie.toString())
+      .body("로그인에 성공했습니다.");
+  }
+
+  @PostMapping("/signout")
+  public ResponseEntity<String> signOut() {
+    ResponseCookie cookie = ResponseCookie.from("accessToken", "")
+      .httpOnly(true)
+      .path("/")
+      .maxAge(0)
+      .build();
+
+    return ResponseEntity.ok()
+      .header(HttpHeaders.SET_COOKIE, cookie.toString())
+      .body("로그아웃 되었습니다.");
   }
 }
