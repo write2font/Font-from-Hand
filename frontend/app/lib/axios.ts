@@ -3,6 +3,7 @@ import axios from "axios";
 const api = axios.create({
   baseURL: "http://localhost:8080/api/v1",
   timeout: 10000,
+  withCredentials: true,
 });
 
 api.interceptors.response.use(
@@ -12,5 +13,27 @@ api.interceptors.response.use(
     return Promise.reject(error);
   },
 );
+
+export const authService = {
+  signIn: async (email: string, password: string) => {
+    const response = await api.post("/auth/signin", { email, password });
+    return response.data;
+  },
+
+  signUp: async (email: string, password: string, name: string) => {
+    const response = await api.post("/auth/signup", { email, password, name });
+    return response.data;
+  },
+
+  signOut: async () => {
+    const response = await api.post("/auth/signout");
+    return response.data;
+  },
+
+  getMe: async () => {
+    const response = await api.get("/auth/me");
+    return response.data;
+  },
+};
 
 export default api;
