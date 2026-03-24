@@ -2,6 +2,7 @@ package com.example.backend.service;
 
 import com.example.backend.dto.SignInRequest;
 import com.example.backend.dto.SignUpRequest;
+import com.example.backend.dto.UserResponse;
 import com.example.backend.entity.User;
 import com.example.backend.repository.UserRepository;
 import com.example.backend.security.JwtProvider;
@@ -38,7 +39,14 @@ public class AuthService {
     if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
       throw new RuntimeException("비밀번호가 일치하지 않습니다.");
     }
-    
+
     return jwtProvider.createToken(user.getEmail());
+  }
+
+  public UserResponse getMyInfo(String email) {
+    User user = userRepository.findByEmail(email)
+      .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
+
+    return new UserResponse(user.getEmail(), user.getName());
   }
 }
