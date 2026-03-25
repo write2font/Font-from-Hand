@@ -9,6 +9,10 @@ const api = axios.create({
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (error.response?.status === 401) {
+      return Promise.reject(error);
+    }
+
     console.error("API 에러 발생:", error.response?.data || error.message);
     return Promise.reject(error);
   },
@@ -26,8 +30,16 @@ export const authService = {
   },
 
   signOut: async () => {
-    const response = await api.post("/auth/signout");
-    return response.data;
+    try {
+      await api.post("/auth/signout");
+
+      localStorage.removeItem("accessToken");
+
+      window.location.href = "/";
+    } catch (error) {
+      console.error("로그아웃 중 에러:", error);
+      window.location.href = "/";
+    }
   },
 
   getMe: async () => {
