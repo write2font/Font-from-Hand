@@ -46,8 +46,10 @@ public class AuthController {
   public ResponseEntity<String> signOut() {
     ResponseCookie cookie = ResponseCookie.from("accessToken", "")
       .httpOnly(true)
+      .secure(false)
       .path("/")
       .maxAge(0)
+      .sameSite("Lax")
       .build();
 
     return ResponseEntity.ok()
@@ -64,7 +66,7 @@ public class AuthController {
     }
 
     String email = jwtProvider.getEmailFromToken(token);
-    
+
     UserResponse response = authService.getMyInfo(email);
     return ResponseEntity.ok(response);
   }
