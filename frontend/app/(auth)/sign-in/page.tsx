@@ -13,7 +13,7 @@ export default function SignInPage() {
     e.preventDefault();
     try {
       await authService.signIn(formData.email, formData.password);
-      router.push("/");
+      window.location.href = "/";
     } catch (error) {
       alert("로그인 실패!");
     }
