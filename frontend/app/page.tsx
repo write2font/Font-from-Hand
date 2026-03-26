@@ -1,7 +1,35 @@
-import Link from "next/link";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { authService } from "@/app/lib/axios";
 import { PenTool, Sparkles, BookOpen } from "lucide-react";
 
 export default function Home() {
+  const router = useRouter();
+  const [user, setUser] = useState<{ name: string } | null>(null);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const data = await authService.getMe();
+        setUser(data);
+      } catch (error) {
+        setUser(null);
+      }
+    };
+    checkAuth();
+  }, []);
+
+  const handleStart = (href: string) => {
+    if (!user) {
+      alert("로그인이 필요한 서비스입니다.");
+      router.push("/sign-in");
+    } else {
+      router.push(href);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <main className="max-w-6xl mx-auto px-6 py-20 text-center">
@@ -15,21 +43,21 @@ export default function Home() {
             description="템플릿을 작성하여 나만의 정성이 담긴 손글씨 폰트를 만듭니다."
             icon={<PenTool size={40} className="text-purple-500" />}
             tag="무료"
-            href="/scan"
+            onStart={() => handleStart("/scan")}
           />
           <ServiceCard
             title="AI 폰트 생성"
             description="적은 수의 글자만으로도 AI가 전체 폰트를 완성합니다."
             icon={<Sparkles size={40} className="text-purple-500" />}
             tag="유료"
-            href="/ai-font"
+            onStart={() => handleStart("/ai-font")}
           />
           <ServiceCard
             title="자서전 제작"
             description="당신의 이야기를 기록하여 특별한 자서전으로 만듭니다."
             icon={<BookOpen size={40} className="text-purple-500" />}
             tag="유료"
-            href="/autobiography"
+            onStart={() => handleStart("/autobiography")}
           />
         </div>
       </main>
@@ -42,7 +70,7 @@ function ServiceCard({
   description,
   icon,
   tag,
-  href,
+  onStart,
   isPrimary = false,
 }: any) {
   return (
@@ -64,21 +92,20 @@ function ServiceCard({
       <div className="mb-8 p-4 bg-purple-50 rounded-2xl">{icon}</div>
 
       <h2 className="text-2xl font-bold mb-4">{title}</h2>
-      <p className="text-sm text-gray-500 leading-relaxed mb-10 min-h-[48px]">
+      <p className="text-sm text-gray-500 leading-relaxed mb-10 min-h-12">
         {description}
       </p>
 
-      <Link href={href || "#"} className="w-full">
-        <button
-          className={`w-full py-4 rounded-2xl font-bold transition ${
-            isPrimary
-              ? "bg-purple-600 text-white hover:bg-purple-700"
-              : "bg-gray-50 text-purple-600 hover:bg-purple-100"
-          }`}
-        >
-          시작하기
-        </button>
-      </Link>
+      <button
+        onClick={onStart}
+        className={`w-full py-4 rounded-2xl font-bold transition active:scale-95 ${
+          isPrimary
+            ? "bg-purple-600 text-white hover:bg-purple-700"
+            : "bg-gray-50 text-purple-600 hover:bg-purple-100"
+        }`}
+      >
+        시작하기
+      </button>
     </div>
   );
 }
