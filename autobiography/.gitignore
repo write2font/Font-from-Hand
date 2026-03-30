@@ -1,0 +1,22 @@
+# 환경변수 (API 키 포함 - 절대 올리지 말 것)
+.env
+
+# Python 캐시
+__pycache__/
+*.pyc
+*.pyo
+
+# 가상환경
+venv/
+.venv/
+
+# 사용자 데이터 (음성, 트랜스크립트, 생성된 PDF)
+data/
+output/
+
+# macOS 메타데이터
+.DS_Store
+
+# IDE
+.idea/
+.vscode/

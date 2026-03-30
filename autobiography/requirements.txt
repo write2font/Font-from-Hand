@@ -1,0 +1,22 @@
+# AI 기반 자서전 생성 시스템 - 의존성 목록 (Python 3.9+)
+
+# STT
+openai-whisper>=20231117
+torch>=2.0.0
+torchaudio>=2.0.0
+
+# .env 파일 로드
+python-dotenv>=1.0.0
+
+# PDF 생성
+fpdf2>=2.7.9
+Pillow>=10.0.0
+
+# 지역 웹 검색 (WebResearcher)
+tavily-python>=0.3.0
+
+# 표지 이미지 생성 (ImageGenerator)
+httpx>=0.24.0
+
+# 유틸리티
+numpy>=1.24.0
