@@ -13,6 +13,7 @@ venv/
 # 사용자 데이터 (음성, 트랜스크립트, 생성된 PDF)
 data/
 output/
+assets/images/
 
 # macOS 메타데이터
 .DS_Store
