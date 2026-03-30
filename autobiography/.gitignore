@@ -14,6 +14,7 @@ venv/
 data/
 output/
 assets/images/
+assets/templates/
 
 # macOS 메타데이터
 .DS_Store
