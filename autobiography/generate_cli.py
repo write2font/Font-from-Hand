@@ -41,7 +41,7 @@ def main():
         transcriptions = data.get("transcriptions", [])
         followup_tx   = data.get("followup_transcriptions", [])
         keywords      = data.get("keywords", [])
-        title         = data.get("title", f"{name}의 이야기")
+        title         = data.get("title", "") or ""  # 비어있으면 AI가 자동 생성
         cover_image   = data.get("cover_image_path", None)
 
         segments = [

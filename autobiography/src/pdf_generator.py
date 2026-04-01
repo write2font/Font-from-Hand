@@ -171,11 +171,6 @@ class PDFGenerator:
         pdf.line(m + 10, pdf.get_y(), pdf.w - m - 10, pdf.get_y())
         pdf.ln(5)
 
-        # 부제 "이름의 이야기"
-        pdf.set_font(self.font_info["font_name"], size=9)
-        pdf.set_text_color(100, 85, 70)
-        pdf.cell(0, 7, f"{user_name}의 이야기", align="C")
-
         pdf.set_text_color(0, 0, 0)
 
     def _draw_toc(self, pdf, chapters):
