@@ -16,6 +16,9 @@ output/
 assets/images/
 assets/templates/
 
+# 테스트 파일
+test_*.json
+
 # macOS 메타데이터
 .DS_Store
 
