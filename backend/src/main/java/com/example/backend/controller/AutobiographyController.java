@@ -110,7 +110,7 @@ public class AutobiographyController {
             @RequestParam("transcriptions")          String transcriptionsJson,
             @RequestParam("followup_transcriptions") String followupJson,
             @RequestParam("keywords")                String keywordsJson,
-            @RequestParam("title")                   String title,
+            @RequestParam(value = "title", required = false, defaultValue = "") String title,
             @RequestParam(value = "images", required = false) List<MultipartFile> images
     ) {
         Path tempJson = null;
