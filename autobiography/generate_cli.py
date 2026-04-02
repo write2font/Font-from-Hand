@@ -3,15 +3,15 @@ generate_cli.py - Spring Boot subprocess용 자서전 생성 CLI 래퍼
 사용법: python3 generate_cli.py <json_file_path>
 입력 JSON:
   {
-    "name": "홍길동",
-    "birth": "1950-03-15",
-    "hometown": "충남 공주시",
-    "user_id": "abc123",
+    "name": "이름",
+    "birth": "YYYY-MM-DD",
+    "hometown": "고향 주소",
+    "user_id": "사용자 ID",
     "questions": ["Q2. 부모님은...", ...],
     "transcriptions": ["답변1", "답변2", ...],
     "followup_transcriptions": ["추가답변1", ...],
-    "keywords": ["고향의 추억", "가족의 사랑", "청춘의 열정"],
-    "title": "홍길동의 이야기",
+    "keywords": ["키워드1", "키워드2", "키워드3"],
+    "title": "자서전 제목",        (비어있으면 AI가 자동 생성)
     "cover_image_path": "/path/to/image.jpg"  (선택)
   }
 출력: {"pdf_path": "/path/to/output.pdf"}  (JSON, stdout)
