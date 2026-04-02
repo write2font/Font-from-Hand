@@ -111,9 +111,7 @@ class WebResearcher:
 
         era_background = self._search(f"한국 {decade} 농촌 생활상 서민 사회", max_results=2)
 
-        local_culture  = self._search(f"{large} 전통 문화 풍습 음식 사투리", max_results=2)
-        if not local_culture:
-            local_culture = self._search(f"충청도 전통 문화 풍습", max_results=2)
+        local_culture  = self._search(f"{large} 세시풍속 마을 행사 농촌 생활", max_results=2)
 
         landmarks = self._search(f"{small} 장소 냇가 시장 학교 지명", max_results=2)
         if not landmarks:
