@@ -46,13 +46,13 @@ export default function AutobiographyResultPage() {
 
         {/* PDF 미리보기 영역 */}
         <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-gray-100 mb-8">
-          <h3 className="text-lg font-bold mb-8">미리보기</h3>
-          <div className="bg-gray-50/50 p-12 rounded-3xl border border-dashed border-gray-200 flex flex-col items-center justify-center min-h-[280px]">
-            <BookOpen size={48} className="text-gray-200 mb-4" />
-            <p className="text-gray-400 text-sm">
-              PDF 미리보기가 여기에 표시됩니다
-            </p>
-          </div>
+          <h3 className="text-lg font-bold mb-6">미리보기</h3>
+          <iframe
+            src="http://localhost:8080/api/v1/autobiography/download"
+            className="w-full rounded-2xl border border-gray-100"
+            style={{ height: "600px" }}
+            title="자서전 미리보기"
+          />
         </div>
 
         {/* 다운로드 */}

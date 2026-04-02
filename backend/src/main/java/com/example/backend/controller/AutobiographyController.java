@@ -78,7 +78,35 @@ public class AutobiographyController {
         }
     }
 
-    // ── 2. AI 추가질문 생성 ──────────────────────────────────────────────────────
+    // ── 2. 키워드/제목 추천 ──────────────────────────────────────────────────────
+    @PostMapping("/suggest")
+    public ResponseEntity<Map<String, Object>> suggest(
+            @RequestBody Map<String, Object> body
+    ) {
+        Path tempJson = null;
+        try {
+            tempJson = Files.createTempFile("auto_suggest_", ".json");
+            Files.writeString(tempJson, objectMapper.writeValueAsString(body), StandardCharsets.UTF_8);
+
+            String scriptPath = Paths.get(autoDir, "suggest_cli.py").toString();
+            String output = runPython(scriptPath, tempJson.toString());
+
+            Map<String, Object> result = objectMapper.readValue(output, Map.class);
+            if (result.containsKey("error")) {
+                return ResponseEntity.internalServerError().body(result);
+            }
+
+            return ResponseEntity.ok(result);
+
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("error", e.getMessage()));
+        } finally {
+            try { if (tempJson != null) Files.deleteIfExists(tempJson); } catch (IOException ignored) {}
+        }
+    }
+
+    // ── 3. AI 추가질문 생성 ──────────────────────────────────────────────────────
     @PostMapping("/generate-followups")
     public ResponseEntity<Map<String, Object>> generateFollowups(
             @RequestBody Map<String, Object> body
@@ -157,6 +185,11 @@ public class AutobiographyController {
 
             // DB 저장 (user는 JWT 연동 후 팀원이 채워줄 것)
             autobiographyRepository.save(new Autobiography(null, name, title, pdfPath));
+
+            // 다운로드 엔드포인트용 경로 갱신
+            Files.createDirectories(Paths.get(autoDir, "output"));
+            Files.writeString(Paths.get(autoDir, "output", "latest_pdf.txt"),
+                pdfPath, StandardCharsets.UTF_8);
 
             return ResponseEntity.ok(Map.of("status", "success", "pdf_path", pdfPath));
 

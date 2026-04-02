@@ -33,11 +33,6 @@ const QUESTIONS = [
   { num: 15, category: "마지막 인사", text: "훗날 사람들이 당신을 어떤 단어 혹은 어떤 사람으로 기억해주길 바라시나요?" },
 ];
 
-const MOCK_KEYWORDS = [
-  "고향의 추억", "가족의 사랑", "청춘의 열정",
-  "시련의 극복", "소중한 인연", "삶의 지혜",
-  "첫 취업", "꿈을 향해", "유년의 기억",
-];
 
 function fmtSeconds(s: number) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
@@ -187,10 +182,14 @@ export default function AutobiographyPage() {
   };
 
   const handleQFileUpload = (blob: Blob, url: string) => {
-    setRecordings((prev) => {
-      const a = [...prev];
-      a[currentQIdx] = { status: "done", blob, url, duration: 0 };
-      return a;
+    const audio = new Audio(url);
+    audio.addEventListener("loadedmetadata", () => {
+      const duration = isFinite(audio.duration) ? Math.round(audio.duration) : 0;
+      setRecordings((prev) => {
+        const a = [...prev];
+        a[currentQIdx] = { status: "done", blob, url, duration };
+        return a;
+      });
     });
     transcribeBlob(
       blob,
@@ -237,10 +236,14 @@ export default function AutobiographyPage() {
   };
 
   const handleFFileUpload = (blob: Blob, url: string) => {
-    setFollowupRecordings((prev) => {
-      const a = [...prev];
-      a[currentFIdx] = { status: "done", blob, url, duration: 0 };
-      return a;
+    const audio = new Audio(url);
+    audio.addEventListener("loadedmetadata", () => {
+      const duration = isFinite(audio.duration) ? Math.round(audio.duration) : 0;
+      setFollowupRecordings((prev) => {
+        const a = [...prev];
+        a[currentFIdx] = { status: "done", blob, url, duration };
+        return a;
+      });
     });
     transcribeBlob(
       blob,
@@ -285,14 +288,23 @@ export default function AutobiographyPage() {
     }
   };
 
-  const goToKeywords = () => {
+  const goToKeywords = async () => {
     setStep("keywords");
     setLoadingKeywords(true);
-    setTimeout(() => {
-      setKeywords(MOCK_KEYWORDS);
-      setSuggestedTitle(`${name}의 이야기`);
+    try {
+      const res = await axios.post("http://localhost:8080/api/v1/autobiography/suggest", {
+        name, birth: birthDate,
+        transcriptions,
+        followup_transcriptions: followupTranscriptions,
+      });
+      setKeywords(res.data.keywords ?? []);
+      setSuggestedTitle(res.data.title ?? "");
+    } catch {
+      setKeywords(["가족", "고향", "청춘", "추억", "성실", "꿈"]);
+      setSuggestedTitle("");
+    } finally {
       setLoadingKeywords(false);
-    }, 1500);
+    }
   };
 
   const toggleKeyword = (kw: string) => {
@@ -538,8 +550,8 @@ export default function AutobiographyPage() {
             </div>
           </div>
           <FieldCard label="예상 제목">
-            <input type="text" value={suggestedTitle} onChange={(e) => setSuggestedTitle(e.target.value)}
-              className="w-full bg-transparent outline-none text-gray-800 text-base" />
+            <input type="text" value={suggestedTitle} readOnly
+              className="w-full bg-transparent outline-none text-gray-800 text-base cursor-default" />
           </FieldCard>
           <div className="flex gap-3 mt-8">
             <SecondaryButton className="flex-1" onClick={() => followupQuestions.length > 0 ? setStep("followup") : setStep("questions")}>
@@ -555,25 +567,45 @@ export default function AutobiographyPage() {
   );
 
   if (step === "generating") {
-    const remainingMin = Math.max(0, Math.ceil((100 - progress) * 1.8 / 60));
+    const steps = ["인터뷰 분석 중", "챕터 구성 중", "본문 작성 중", "표지 생성 중", "PDF 완성 중"];
+    const stepIdx = Math.min(Math.floor(progress / 20), steps.length - 1);
     return (
-      <div className="min-h-screen bg-white">
-        <div className="max-w-3xl mx-auto px-6 pt-16">
-          <div className="flex items-center justify-between mb-16">
-            <h1 className="text-2xl font-bold">자서전 생성 중</h1>
-            <button onClick={() => { progressIntervalRef.current && clearInterval(progressIntervalRef.current); setStep("keywords"); }}
-              className="px-6 py-3 bg-purple-200 text-purple-700 font-bold rounded-xl hover:bg-purple-300 transition text-sm">
-              생성 취소
-            </button>
-          </div>
-          <div className="relative w-full h-16 bg-gray-100 rounded-full overflow-hidden border border-gray-200 mb-4">
-            <div className="absolute left-0 top-0 h-full bg-purple-300 rounded-full transition-all duration-500"
-              style={{ width: `${progress}%` }} />
-            <div className="absolute inset-0 flex items-center px-6">
-              <span className="text-lg font-bold text-gray-800">{progress}%</span>
+      <div className="min-h-screen bg-gradient-to-b from-purple-50 to-white flex flex-col items-center justify-center px-6">
+        <div className="w-full max-w-md text-center">
+          {/* 아이콘 */}
+          <div className="relative w-24 h-24 mx-auto mb-10">
+            <div className="absolute inset-0 rounded-full bg-purple-100 animate-ping opacity-40" />
+            <div className="relative w-24 h-24 rounded-full bg-purple-500 flex items-center justify-center shadow-lg shadow-purple-200">
+              <BookOpen size={36} className="text-white" />
             </div>
           </div>
-          <p className="text-gray-400 text-sm">남은시간: 약 {remainingMin}분</p>
+
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">자서전을 만들고 있어요</h1>
+          <p className="text-gray-400 text-sm mb-10">{name}님의 소중한 이야기를 담고 있습니다</p>
+
+          {/* 진행바 */}
+          <div className="relative w-full h-3 bg-gray-100 rounded-full overflow-hidden mb-3">
+            <div className="absolute left-0 top-0 h-full bg-gradient-to-r from-purple-400 to-purple-600 rounded-full transition-all duration-500"
+              style={{ width: `${progress}%` }} />
+          </div>
+          <div className="flex justify-between text-xs text-gray-400 mb-8">
+            <span>{steps[stepIdx]}</span>
+            <span>{progress}%</span>
+          </div>
+
+          {/* 단계 표시 */}
+          <div className="flex justify-center gap-2 mb-10">
+            {steps.map((s, i) => (
+              <div key={s} className={`flex flex-col items-center gap-1.5 ${i <= stepIdx ? "opacity-100" : "opacity-30"}`}>
+                <div className={`w-2 h-2 rounded-full transition-all ${i < stepIdx ? "bg-purple-500" : i === stepIdx ? "bg-purple-400 scale-125" : "bg-gray-300"}`} />
+              </div>
+            ))}
+          </div>
+
+          <button onClick={() => { progressIntervalRef.current && clearInterval(progressIntervalRef.current); setStep("keywords"); }}
+            className="text-sm text-gray-400 hover:text-gray-600 transition underline underline-offset-2">
+            생성 취소
+          </button>
         </div>
       </div>
     );
