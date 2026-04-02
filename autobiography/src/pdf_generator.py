@@ -115,7 +115,8 @@ class PDFGenerator:
                 pdf.add_font("default_font", fname=config.PDF_FALLBACK_FONT)
                 self.font_info["font_name"] = "default_font"
                 pdf.font_name = "default_font"
-            except:
+            except Exception as e:
+                print(f"[PDF] ⚠️  기본 폰트 등록 실패 ({e}) → Helvetica")
                 self.font_info["font_name"] = "Helvetica"
                 pdf.font_name = "Helvetica"
 

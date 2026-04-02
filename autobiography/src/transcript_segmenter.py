@@ -87,7 +87,7 @@ class TranscriptSegmenter:
         result = json.loads(raw)
 
         segments = result.get("segments", [])
-        while len(segments) < 15:
+        while len(segments) < 15 and len(segments) < len(QUESTIONS):
             idx = len(segments)
             segments.append({"question": QUESTIONS[idx], "answer": ""})
         return segments[:15]

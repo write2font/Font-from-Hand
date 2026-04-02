@@ -95,7 +95,8 @@ def main():
                     output_path=img_path,
                     cover_title=title,
                 )
-            except Exception:
+            except Exception as e:
+                print(f"[이미지] 표지 생성 실패 (건너뜀): {e}")
                 cover_image = None
 
         pdf_path = PDFGenerator(user_id=user_id).generate(autobiography, cover_image_path=cover_image)
