@@ -18,8 +18,15 @@ import config
 
 class STTEngine:
     def __init__(self):
-        print(f"[STT] Whisper 모델 로딩 중: {config.WHISPER_MODEL}")
-        self.model = whisper.load_model(config.WHISPER_MODEL)
+        import torch
+        if torch.cuda.is_available():
+            device = "cuda"
+        elif torch.backends.mps.is_available():
+            device = "mps"
+        else:
+            device = "cpu"
+        print(f"[STT] Whisper 모델 로딩 중: {config.WHISPER_MODEL} (device: {device})")
+        self.model = whisper.load_model(config.WHISPER_MODEL, device=device)
         os.makedirs(config.TRANSCRIPT_DIR, exist_ok=True)
 
     # ──────────────────────────────────────────
