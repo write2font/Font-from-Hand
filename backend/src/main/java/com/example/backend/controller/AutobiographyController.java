@@ -1,5 +1,7 @@
 package com.example.backend.controller;
 
+import com.example.backend.entity.Autobiography;
+import com.example.backend.repository.AutobiographyRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -21,6 +23,11 @@ public class AutobiographyController {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final String autoDir = Paths.get(System.getProperty("user.dir"), "..", "autobiography").normalize().toString();
+    private final AutobiographyRepository autobiographyRepository;
+
+    public AutobiographyController(AutobiographyRepository autobiographyRepository) {
+        this.autobiographyRepository = autobiographyRepository;
+    }
 
     private static final List<String> QUESTIONS = List.of(
         "Q2. 부모님은 어떤 분이셨으며, 형제들 사이에서 주로 어떤 역할이었나요?",
@@ -38,8 +45,6 @@ public class AutobiographyController {
         "Q14. 다시 태어난다면 꼭 해보고 싶은 일이나, 후배 세대에게 꼭 전하고 싶은 한마디는 무엇인가요?",
         "Q15. 훗날 사람들이 당신을 어떤 단어 혹은 어떤 사람으로 기억해주길 바라시나요?"
     );
-
-    private static final String LATEST_PDF_FILE = "latest_pdf.txt";
 
     // ── 1. STT: 음성 파일 → 텍스트 변환 ─────────────────────────────────────────
     @PostMapping("/transcribe")
@@ -149,10 +154,9 @@ public class AutobiographyController {
             }
 
             String pdfPath = (String) result.get("pdf_path");
-            Files.writeString(
-                Paths.get(autoDir, "output", "latest_pdf.txt"),
-                pdfPath, StandardCharsets.UTF_8
-            );
+
+            // DB 저장 (user는 JWT 연동 후 팀원이 채워줄 것)
+            autobiographyRepository.save(new Autobiography(null, name, title, pdfPath));
 
             return ResponseEntity.ok(Map.of("status", "success", "pdf_path", pdfPath));
 
