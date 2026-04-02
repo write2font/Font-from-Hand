@@ -69,8 +69,10 @@ class NLPProcessor:
         age = self.calculate_age(birth_date_str)
         if age >= self.thresholds["senior"]:
             return "Senior"
-        elif age >= self.thresholds["adult"]:
-            return "Adult"
+        elif age >= self.thresholds["middle"]:
+            return "Middle"
+        elif age >= self.thresholds["young_adult"]:
+            return "YoungAdult"
         return "Youth"
 
     # ──────────────────────────────────────────
@@ -111,43 +113,41 @@ class NLPProcessor:
     # ──────────────────────────────────────────
 
     def extract_keyword_candidates(self, transcript_text: str, birth_date_str: str) -> list:
-        """키워드 후보 10~15개를 추출해서 사용자 선택용으로 반환합니다."""
+        """키워드 후보 12개를 추출해서 사용자 선택용으로 반환합니다."""
         prompt = (
-            f"Interview text:\n{transcript_text[:2000]}\n\n"
-            f"Extract 12 meaningful Korean keywords (nouns) from this person's life story.\n"
-            f"Include: places, people, objects, events, emotions, activities.\n"
-            f"Answer format: keyword1,keyword2,keyword3,...,keyword12\n"
-            f"Use only Korean characters. No spaces around commas. No duplicates."
+            f"다음 인터뷰에서 이 사람의 삶을 대표하는 명사 키워드 12개를 추출하라.\n"
+            f"장소, 인물, 사물, 사건, 감정, 활동 등을 포함하라.\n"
+            f"반드시 인터뷰에 실제로 언급된 내용만 사용하라. 없는 내용을 만들지 마라.\n"
+            f"출력 형식: 키워드1,키워드2,...,키워드12 (한국어만, 쉼표 구분, 중복 없음)\n\n"
+            f"인터뷰:\n{transcript_text[:2000]}"
         )
         response = client.chat.completions.create(
             model=config.LLM_MODEL,
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=100,
+            max_tokens=150,
         )
         raw = response.choices[0].message.content.strip()
         raw_clean = re.sub(r"[^가-힣,]", "", raw)
-        candidates = [k.strip() for k in raw_clean.split(",") if len(k.strip()) >= 2]
-        # 중복 제거
         seen = set()
-        unique = []
-        for k in candidates:
-            if k not in seen:
+        candidates = []
+        for k in raw_clean.split(","):
+            k = k.strip()
+            if len(k) >= 2 and k not in seen:
                 seen.add(k)
-                unique.append(k)
-        candidates = unique[:12]
+                candidates.append(k)
+        candidates = candidates[:12]
         if len(candidates) < 3:
-            candidates = ["냇가", "달리기", "화롯불", "가족", "성실", "고향"]
+            candidates = ["가족", "고향", "청춘", "추억", "성실", "꿈"]
         print(f"[NLP] 키워드 후보 {len(candidates)}개: {candidates}")
         return candidates
 
     def extract_top_keywords(self, transcript_text: str) -> list:
         """인터뷰 전체에서 핵심 키워드 3개를 추출합니다."""
         prompt = (
-            f"Interview text:\n{transcript_text[:1500]}\n\n"
-            f"Extract exactly 3 Korean keywords (nouns only) that represent this person's life.\n"
-            f"Answer format: keyword1,keyword2,keyword3\n"
-            f"Example: 냇가,달리기,화롯불\n"
-            f"Use only Korean characters. No spaces around commas."
+            f"다음 인터뷰에서 이 사람의 삶을 가장 잘 대표하는 명사 키워드 3개를 추출하라.\n"
+            f"반드시 인터뷰에 실제로 언급된 내용만 사용하라.\n"
+            f"출력 형식: 키워드1,키워드2,키워드3 (한국어만, 쉼표 구분)\n\n"
+            f"인터뷰:\n{transcript_text[:1500]}"
         )
         response = client.chat.completions.create(
             model=config.LLM_MODEL,
@@ -155,13 +155,10 @@ class NLPProcessor:
             max_tokens=30,
         )
         raw = response.choices[0].message.content.strip()
-        # 한국어 단어만 추출
         raw_clean = re.sub(r"[^가-힣,]", "", raw)
         keywords = [k.strip() for k in raw_clean.split(",") if k.strip() and len(k.strip()) >= 2][:3]
         if not keywords:
-            keywords = ["냇가", "달리기", "화롯불"]
-        # ** 등 마크다운 제거
-        keywords = [re.sub(r"\*+", "", k).strip() for k in keywords if k.strip()]
+            keywords = ["가족", "고향", "청춘"]
         print(f"[NLP] 핵심 키워드 3개: {keywords}")
         return keywords
 
@@ -302,15 +299,21 @@ class NLPProcessor:
                         chapter_qs.append(int(m.group(1)))
 
             # 해당 Q 답변만 뽑아서 챕터 전용 텍스트 구성
+            # seg_map 없으면 전체 transcript 사용, 있으면 해당 Q만 사용 (없는 내용 창작 방지)
             if seg_map and chapter_qs:
                 chapter_text_parts = []
                 for qn in chapter_qs:
                     ans = seg_map.get(qn, "")
                     if ans:
                         chapter_text_parts.append("[Q" + str(qn) + " 답변]\n" + ans)
-                chapter_transcript = "\n\n".join(chapter_text_parts) if chapter_text_parts else transcript_text
+                chapter_transcript = "\n\n".join(chapter_text_parts) if chapter_text_parts else ""
             else:
                 chapter_transcript = transcript_text
+
+            # 해당 챕터 답변이 아예 없으면 건너뜀
+            if not chapter_transcript.strip():
+                print(f"  ⚠️  ({i+1}/{len(chapter_structure)}) {title} - 답변 없음, 건너뜀")
+                continue
 
             content = self._generate_chapter(
                 chapter=chapter,
@@ -465,31 +468,31 @@ class NLPProcessor:
 
         system_prompt = (
             f"{persona_label}\n"
-            "【필수 규칙】\n"
-            "1. 순수 한국어만. 영어 단어(Kids 등 포함)/한자/외국어 절대 금지.\n"
-            "2. 서술체(-다, -었다, -이었다)로만. 존댓말(-습니다)/번역투 금지.\n"
-            "3. 챕터 제목/소제목을 본문에 절대 쓰지 마라. 마크다운(#,*,**) 금지.\n"
-            "4. 이전 챕터에 나온 사건/문장 반복 절대 금지.\n"
-            f"5. {war_note}\n"
-            f"6. 생년({birth_year}년) 언급은 딱 한 번만. 날씨/계절로 생년 묘사 금지.\n"
-            "7. 반드시 1인칭('나')으로만 서술. 저자 이름이나 '그', '그녀', '그에게' 절대 금지.\n"
-            "8. 인터뷰 답변에 없는 내용(대학 전공, 직업, 사건 등) 절대 창작 금지. 답변에 있는 사실만 써라.\n"
+            "【절대 규칙 - 위반 시 전체 실패】\n"
+            "1. 인터뷰 답변에 명시된 사실만 써라. 언급되지 않은 직업·장소·사건·인물·감정을 절대 창작하지 마라.\n"
+            "2. 인터뷰에 없는 내용을 추론하거나 상상으로 채우지 마라. 모르면 쓰지 마라.\n"
+            "3. 순수 한국어만. 영어·한자·외국어 절대 금지.\n"
+            "4. 서술체(-다, -었다, -이었다)로만. 존댓말(-습니다)/번역투 금지.\n"
+            "5. 챕터 제목·소제목을 본문에 절대 쓰지 마라. 마크다운(#,*,**) 금지.\n"
+            "6. 이전 챕터에 나온 사건·문장 반복 절대 금지.\n"
+            f"7. {war_note}\n"
+            "8. 반드시 1인칭('나')으로만 서술. 저자 이름이나 '그', '그녀' 절대 금지.\n"
             "9. 1200자 이상 완성된 문장으로 마무리."
         )
 
-        # transcript_text만 미리 잘라서 prev_context/region_context가 항상 포함되도록 함
         transcript_trimmed = transcript_text[:1500] + ("...(이하 생략)" if len(transcript_text) > 1500 else "")
 
         user_prompt = (
             f"저자: {user_name} ({birth_year}년생, 만 {age}세)\n"
             f"챕터 제목: {title}\n\n"
-            f"다뤄야 할 내용:\n{questions_str}\n\n"
+            f"이 챕터에서 다룰 질문:\n{questions_str}\n\n"
             f"작성 가이드: {chapter['guide']}\n\n"
-            f"인터뷰 원문:\n\"\"\"\n{transcript_trimmed}\n\"\"\""
+            f"【아래 인터뷰 답변만 사용하라. 여기에 없는 내용은 절대 쓰지 마라】\n"
+            f"\"\"\"\n{transcript_trimmed}\n\"\"\""
             f"{region_context}"
             f"{prev_context}\n\n"
-            f"위 정보로 '{title}' 챕터를 서술체(-다, -었다)로 1500자 내외로 작성하라. "
-            f"인터뷰 내용을 중심으로 감정과 배경 묘사를 덧붙여라."
+            f"위 답변에 있는 사실만으로 '{title}' 챕터를 1500자 내외로 작성하라. "
+            f"답변의 내용을 1인칭 서술체로 풀어쓰고, 감정 표현은 답변에서 드러난 것만 살려라."
         )
 
         return self._generate(system_prompt, user_prompt, max_tokens=config.LLM_MAX_TOKENS)
