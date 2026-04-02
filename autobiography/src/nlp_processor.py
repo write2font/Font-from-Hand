@@ -309,8 +309,7 @@ class NLPProcessor:
             # 말투 정규화
             content = _re.sub(r"했었[어다]", "했다", content)
             content = _re.sub(r"하곤 했[었]?[어다]?", "했다", content)
-            # '전의 마을' → '전의' (지역명 뒤 마을 제거)
-            content = _re.sub(r"(전의|전의면|연기|충청남도)\s*마을", r"\1", content)
+            # '○○ 마을' → '○○' (지역명 뒤 마을 제거)
             content = _re.sub(r"(\S{2,5})\s*마을", r"\1", content)
             # 이름(종희 등) → 나 (1인칭 자서전)
             name_short = user_name[-2:] if len(user_name) >= 2 else user_name
@@ -338,8 +337,7 @@ class NLPProcessor:
             content = "\n".join(lines).strip()
 
             written_summaries.append(f"[{title}]: {content[:300]}...")
-            # 최근 3개만 유지 (프롬프트 길이 제한)
-            # 전체 챕터 요약 유지 (중복 방지)
+            # 전체 챕터 요약 유지 (흐름/중복 방지용)
             chapters.append({"title": title, "content": content})
             print(f"  ✓ ({i+1}/{len(self.chapter_structure)}) {title}")
 
