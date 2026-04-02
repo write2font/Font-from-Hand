@@ -7,6 +7,7 @@ import os
 import sys
 import json
 import re
+import time
 from datetime import datetime
 
 from openai import OpenAI
@@ -31,7 +32,6 @@ class NLPProcessor:
         os.makedirs(config.SUMMARY_DIR, exist_ok=True)
 
     def _generate(self, system_prompt: str, user_prompt: str, max_tokens: int = None) -> str:
-        import time
         for attempt in range(3):
             try:
                 response = client.chat.completions.create(
@@ -156,8 +156,7 @@ class NLPProcessor:
         )
         raw = response.choices[0].message.content.strip()
         # 한국어 단어만 추출
-        import re as _re
-        raw_clean = _re.sub(r"[^가-힣,]", "", raw)
+        raw_clean = re.sub(r"[^가-힣,]", "", raw)
         keywords = [k.strip() for k in raw_clean.split(",") if k.strip() and len(k.strip()) >= 2][:3]
         if not keywords:
             keywords = ["냇가", "달리기", "화롯불"]
@@ -245,7 +244,6 @@ class NLPProcessor:
 
         print(f"[NLP] 페르소나: {persona_key} (만 {age}세) → {len(self.chapter_structure)}개 챕터 생성 중...")
 
-        import re as _re
         chapters = []
         written_summaries = []
 
@@ -295,26 +293,26 @@ class NLPProcessor:
             )
 
             # 마크다운/소제목 제거
-            content = _re.sub(r"#{1,6}\s*", "", content)
-            content = _re.sub(r"\*{1,3}([^*]+)\*{1,3}", r"\1", content)
-            content = _re.sub(r"^[-*]\s+", "", content, flags=_re.MULTILINE)
+            content = re.sub(r"#{1,6}\s*", "", content)
+            content = re.sub(r"\*{1,3}([^*]+)\*{1,3}", r"\1", content)
+            content = re.sub(r"^[-*]\s+", "", content, flags=re.MULTILINE)
             # "추억의 단면:", "소제목:" 패턴 제거
-            content = _re.sub(r"^.{1,10}:\s*", "", content, flags=_re.MULTILINE)
+            content = re.sub(r"^.{1,10}:\s*", "", content, flags=re.MULTILINE)
             # 영어 제거
-            content = _re.sub(r"[A-Za-z]+", "", content)
+            content = re.sub(r"[A-Za-z]+", "", content)
             # 이상한 문자 제거 (인도어, 데바나가리 등)
-            content = _re.sub(r"[^\uAC00-\uD7A3\u1100-\u11FF\u3130-\u318F\s\d\.,!?~\-\"\'()]", "", content)
+            content = re.sub(r"[^\uAC00-\uD7A3\u1100-\u11FF\u3130-\u318F\s\d\.,!?~\-\"\'()]", "", content)
             # 특수문자 치환
             content = content.replace("—", "-").replace("–", "-")
             # 말투 정규화
-            content = _re.sub(r"했었[어다]", "했다", content)
-            content = _re.sub(r"하곤 했[었]?[어다]?", "했다", content)
+            content = re.sub(r"했었[어다]", "했다", content)
+            content = re.sub(r"하곤 했[었]?[어다]?", "했다", content)
             # '○○ 마을' → '○○' (지역명 뒤 마을 제거)
-            content = _re.sub(r"(\S{2,5})\s*마을", r"\1", content)
+            content = re.sub(r"(\S{2,5})\s*마을", r"\1", content)
             # 이름(종희 등) → 나 (1인칭 자서전)
             name_short = user_name[-2:] if len(user_name) >= 2 else user_name
-            content = _re.sub(rf"{user_name}(은|는|이|가|을|를|의|에게|에서|도|만|께서|씨)", r"나\1", content)
-            content = _re.sub(rf"{name_short}(은|는|이|가|을|를|의|에게|에서|도|만|께서)", r"나\1", content)
+            content = re.sub(rf"{re.escape(user_name)}(은|는|이|가|을|를|의|에게|에서|도|만|께서|씨)", r"나\1", content)
+            content = re.sub(rf"{re.escape(name_short)}(은|는|이|가|을|를|의|에게|에서|도|만|께서)", r"나\1", content)
             # 3인칭 → 1인칭 여성 화자 수정
             content = content.replace("그에게는", "나에게는")
             content = content.replace("그에게", "나에게")
@@ -326,7 +324,7 @@ class NLPProcessor:
             content = content.replace("그녀의", "나의")
             content = content.replace("그녀에게", "나에게")
             # 빈 줄 제거 (문단 사이 줄바꿈 없애기)
-            content = _re.sub(r"\n{2,}", "\n", content).strip()
+            content = re.sub(r"\n{2,}", "\n", content).strip()
             # 첫 줄 제목 반복 제거
             lines = content.split("\n")
             while lines and (
@@ -393,8 +391,7 @@ class NLPProcessor:
             )
             title = response.choices[0].message.content.strip()
             title = title.replace("'", "").replace('"', "").replace(".", "").replace("。", "").strip()
-            import re as _re
-            title = _re.sub(r"[A-Za-z]", "", title).strip()
+            title = re.sub(r"[A-Za-z]", "", title).strip()
             if len(title) >= 4:
                 print(f"[NLP] 표지 제목: {title}")
                 return title
