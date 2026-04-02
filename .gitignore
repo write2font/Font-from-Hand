@@ -15,6 +15,9 @@ build/
 .gradle/
 bin/
 
-# 4. 파이썬 (Font-Engine) 
+# 4. 파이썬 (Font-Engine)
 __pycache__/
 venv/
+
+# 5. 자서전 파이프라인 (feat/autobiography-backend 브랜치에서 관리)
+/autobiography/
