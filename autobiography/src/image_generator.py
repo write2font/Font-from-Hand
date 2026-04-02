@@ -41,29 +41,36 @@ class ImageGenerator:
         print("[이미지] 충남대 Gateway로 이미지 생성 중... (10~30초)")
         return self._call_gateway(prompt, output_path)
 
+    # 매번 다른 스타일을 선택하기 위한 스타일 목록
+    _STYLES = [
+        ("watercolor", "soft watercolor illustration, delicate brushstrokes, translucent layers, gentle color washes"),
+        ("oil_painting", "impressionist oil painting, rich textured brushwork, vibrant yet warm tones, painterly style"),
+        ("korean_ink", "Korean ink wash painting, minimalist brushwork, misty mountains, subtle ink gradients, hanji texture"),
+        ("gouache", "gouache illustration, flat warm colors, graphic yet painterly, folk art inspired"),
+        ("pencil_sketch", "detailed pencil and watercolor sketch, soft hand-drawn lines, gentle color washes, intimate feel"),
+    ]
+
     def _make_prompt(self, keywords, summary_text, cover_title=None) -> str:
+        import random
         kw_str = ", ".join(keywords)
-        title_line = f"'{cover_title}'" if cover_title else "한 여성의 삶"
+        title_line = f"'{cover_title}'" if cover_title else "한 사람의 삶"
+
+        style_key, style_desc = random.choice(self._STYLES)
 
         llm_prompt = (
             f"자서전 표지 일러스트를 위한 영문 이미지 생성 프롬프트를 만들어라.\n\n"
             f"자서전 제목: {title_line}\n"
-            f"핵심 키워드: {kw_str}\n\n"
+            f"핵심 키워드: {kw_str}\n"
+            f"그림 스타일: {style_desc}\n\n"
             f"[프롬프트 작성 규칙]\n"
-            f"1. 제목의 정서를 자연 풍경(하늘, 들판, 나무, 빛, 바람, 꽃)으로 시각화\n"
-            f"2. 스타일: Studio Ghibli inspired watercolor illustration\n"
-            f"   - 부드럽고 따뜻한 색감, 섬세한 붓터치\n"
-            f"   - 빛과 그림자가 아름다운 자연 풍경\n"
-            f"   - 감성적이고 서정적인 분위기\n"
+            f"1. 제목과 키워드의 정서를 자연/사물/풍경으로 시각화 (하늘, 들판, 나무, 빛, 바람, 꽃, 강, 산 등)\n"
+            f"2. 위에 지정된 스타일을 반드시 반영할 것\n"
             f"3. 사람, 건물, 글자 절대 없음\n"
-            f"4. 50단어 이내 영어로만. 프롬프트 텍스트만 출력.\n\n"
-            f"좋은 예시:\n"
-            f"'냇물' 제목 → 'gentle stream winding through lush green meadow, "
-            f"soft morning sunlight filtering through willow branches, "
-            f"Studio Ghibli style watercolor, warm golden tones'\n"
-            f"'달리기' 제목 → 'wide open field under vast blue sky, "
-            f"golden wheat swaying in wind, endless horizon, "
-            f"Studio Ghibli style watercolor, hopeful warm light'"
+            f"4. 키워드마다 다른 장면이 나오도록 창의적으로 구성\n"
+            f"5. 50단어 이내 영어로만. 프롬프트 텍스트만 출력.\n\n"
+            f"예시 (키워드: 중장비, 고향, 성실):\n"
+            f"'wide open construction site at golden hour, distant mountains, "
+            f"warm dust in the air, {style_desc}'\n"
         )
         try:
             resp = client_llm.chat.completions.create(
@@ -77,14 +84,12 @@ class ImageGenerator:
             print(f"[이미지] 프롬프트 생성 실패 ({e}) → 기본값 사용")
             base = (
                 "peaceful countryside path lined with wildflowers, "
-                "warm golden afternoon light through tree canopy, "
-                "soft breeze, lush greenery, Studio Ghibli style watercolor"
+                f"warm golden afternoon light through tree canopy, soft breeze, {style_desc}"
             )
 
         return (
             base
-            + ", Studio Ghibli inspired watercolor illustration, "
-            + "beautiful detailed brushwork, soft warm lighting, "
+            + f", {style_desc}, "
             + "book cover art, no people, no buildings, no text, no letters, "
             + "high quality, masterpiece"
         )
