@@ -39,3 +39,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# font-engine
+input_pages/
+output/
+font-engine/__pycache__/
+font-engine/*.pyc
+font-engine/**/*.pbm
+font-engine/**/*.svg
+font-engine/**/*.png
