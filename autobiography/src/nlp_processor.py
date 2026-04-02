@@ -165,9 +165,38 @@ class NLPProcessor:
         print(f"[NLP] 핵심 키워드 3개: {keywords}")
         return keywords
 
-    def generate_chapter_titles(self, transcript_text: str, birth_date_str: str, selected_keywords: list = None) -> list:
+    def _build_chapter_structure(self, seg_map: dict) -> list:
+        """답변 내용 기반으로 챕터 구조를 동적으로 생성. 부실한 섹션은 앞 챕터에 병합."""
+        THRESHOLD = 50  # 섹션 내 총 답변 길이 기준 (chars)
+        base = config.CHAPTER_STRUCTURE
+        result = []
+
+        for section in base:
+            is_anchor = section["title"] in ("프롤로그", "에필로그")
+            total_chars = sum(len(seg_map.get(qn, "")) for qn in section.get("q_numbers", []))
+
+            if is_anchor or total_chars >= THRESHOLD:
+                result.append(dict(section))
+            else:
+                # 내용 부족 → 에필로그 앞의 챕터에 병합
+                if result and result[-1]["title"] != "에필로그":
+                    prev = result[-1]
+                    result[-1] = {
+                        **prev,
+                        "q_numbers": prev["q_numbers"] + section.get("q_numbers", []),
+                        "questions": prev["questions"] + section.get("questions", []),
+                    }
+                else:
+                    result.append(dict(section))
+
+        return result if len(result) >= 4 else base
+
+    def generate_chapter_titles(self, transcript_text: str, birth_date_str: str,
+                                 selected_keywords: list = None,
+                                 n: int = None, chapter_structure: list = None) -> list:
         birth_year = birth_date_str.split("-")[0]
-        n = len(self.chapter_structure)
+        chapter_structure = chapter_structure or self.chapter_structure
+        n = n or len(chapter_structure)
 
         # 핵심 키워드 3개 (사용자 선택 or 자동 추출)
         top_keywords = selected_keywords if selected_keywords else self.extract_top_keywords(transcript_text)
@@ -175,7 +204,7 @@ class NLPProcessor:
         keywords_str = ", ".join(top_keywords)
 
         # 챕터별 핵심 내용 한 줄 요약
-        chapter_guides = [c.get("guide", "")[:30] for c in self.chapter_structure]
+        chapter_guides = [c.get("guide", "")[:30] for c in chapter_structure]
         guides_str = "\n".join([f"{i+1}번 챕터: {g}" for i, g in enumerate(chapter_guides)])
 
         prompt = (
@@ -217,7 +246,7 @@ class NLPProcessor:
 
         print(f"[NLP] 파싱된 제목 ({len(cleaned)}개): {cleaned}")
 
-        defaults = [c["title"] for c in self.chapter_structure]
+        defaults = [c["title"] for c in chapter_structure]
         while len(cleaned) < n:
             cleaned.append(defaults[len(cleaned)])
         return cleaned[:n]
@@ -237,17 +266,7 @@ class NLPProcessor:
         print("[NLP] 키워드 추출 중...")
         keywords = self.extract_keywords(transcript_text, birth_date_str)
 
-        print("[NLP] 챕터 제목 생성 중...")
-        chapter_titles = self.generate_chapter_titles(
-            transcript_text, birth_date_str, selected_keywords=selected_keywords
-        )
-
-        print(f"[NLP] 페르소나: {persona_key} (만 {age}세) → {len(self.chapter_structure)}개 챕터 생성 중...")
-
-        chapters = []
-        written_summaries = []
-
-        # segments를 Q번호로 인덱싱 (Q1~Q15)
+        # segments를 Q번호로 인덱싱 (Q1~Q15) - 챕터 구조 결정 전에 먼저 빌드
         seg_map = {}
         if segments:
             for seg in segments:
@@ -255,7 +274,21 @@ class NLPProcessor:
                 if m:
                     seg_map[int(m.group(1))] = seg.get("answer", "").strip()
 
-        for i, chapter in enumerate(self.chapter_structure):
+        # 답변 밀도 기반으로 챕터 구조 동적 생성
+        chapter_structure = self._build_chapter_structure(seg_map)
+
+        print("[NLP] 챕터 제목 생성 중...")
+        chapter_titles = self.generate_chapter_titles(
+            transcript_text, birth_date_str, selected_keywords=selected_keywords,
+            n=len(chapter_structure), chapter_structure=chapter_structure,
+        )
+
+        print(f"[NLP] 페르소나: {persona_key} (만 {age}세) → {len(chapter_structure)}개 챕터 생성 중...")
+
+        chapters = []
+        written_summaries = []
+
+        for i, chapter in enumerate(chapter_structure):
             title      = chapter_titles[i]
             use_region = chapter.get("region_context", False) and region_info
             use_era    = chapter.get("era_context",   False) and region_info
@@ -337,7 +370,7 @@ class NLPProcessor:
             written_summaries.append(f"[{title}]: {content[:300]}...")
             # 전체 챕터 요약 유지 (흐름/중복 방지용)
             chapters.append({"title": title, "content": content})
-            print(f"  ✓ ({i+1}/{len(self.chapter_structure)}) {title}")
+            print(f"  ✓ ({i+1}/{len(chapter_structure)}) {title}")
 
         # 표지 제목 생성 (선택된 키워드 활용)
         cover_title = self._generate_cover_title(

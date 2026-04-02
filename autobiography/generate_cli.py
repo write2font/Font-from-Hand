@@ -68,7 +68,7 @@ def main():
             except Exception as e:
                 print(f"[지역 정보] 수집 실패 (건너뜀): {e}")
 
-        nlp = NLPProcessor(extended=False)
+        nlp = NLPProcessor()
         autobiography = nlp.generate_autobiography(
             transcript_text=transcript_text,
             birth_date_str=birth,
