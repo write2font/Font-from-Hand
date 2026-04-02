@@ -444,7 +444,7 @@ export default function AutobiographyPage() {
           <SecondaryButton className="flex-1" onClick={() => currentQIdx === 0 ? setStep("image") : setCurrentQIdx((i) => i - 1)}>
             이전
           </SecondaryButton>
-          <PrimaryButton className="flex-1" onClick={() => isLast ? handleQuestionsNext() : setCurrentQIdx((i) => i + 1)}>
+          <PrimaryButton className="flex-1" disabled={!tx.trim()} onClick={() => isLast ? handleQuestionsNext() : setCurrentQIdx((i) => i + 1)}>
             {isLast ? "완료" : "다음 질문"}
           </PrimaryButton>
         </div>
@@ -505,7 +505,7 @@ export default function AutobiographyPage() {
           <SecondaryButton className="flex-1" onClick={() => currentFIdx === 0 ? setStep("questions") : setCurrentFIdx((i) => i - 1)}>
             이전
           </SecondaryButton>
-          <PrimaryButton className="flex-1" onClick={() => isLast ? goToKeywords() : setCurrentFIdx((i) => i + 1)}>
+          <PrimaryButton className="flex-1" disabled={!ftx?.trim()} onClick={() => isLast ? goToKeywords() : setCurrentFIdx((i) => i + 1)}>
             {isLast ? "완료" : "다음 질문"}
           </PrimaryButton>
         </div>
@@ -663,26 +663,26 @@ function RecordingArea({
         )}
       </div>
 
-      {/* STT 결과 */}
-      {(transcribing || (recording.status === "done" && !active)) && (
-        <div className="bg-gray-100 rounded-2xl p-6">
-          <p className="text-xs font-bold text-gray-500 mb-3">음성 변환 결과 <span className="text-gray-400 font-normal">(수정 가능)</span></p>
-          {transcribing ? (
-            <div className="flex items-center gap-2 text-gray-400 text-sm">
-              <div className="w-4 h-4 border-2 border-purple-300 border-t-purple-500 rounded-full animate-spin" />
-              변환 중...
-            </div>
-          ) : (
-            <textarea
-              value={transcript}
-              onChange={(e) => onTranscriptChange(e.target.value)}
-              rows={5}
-              placeholder="변환된 텍스트가 없으면 직접 입력하세요."
-              className="w-full bg-transparent outline-none text-gray-800 text-sm leading-relaxed resize-none placeholder-gray-300"
-            />
-          )}
-        </div>
-      )}
+      {/* STT 결과 / 텍스트 직접 입력 */}
+      <div className="bg-gray-100 rounded-2xl p-6">
+        <p className="text-xs font-bold text-gray-500 mb-3">
+          답변 입력 <span className="text-gray-400 font-normal">(음성 변환 후 수정하거나 직접 입력하세요)</span>
+        </p>
+        {transcribing ? (
+          <div className="flex items-center gap-2 text-gray-400 text-sm">
+            <div className="w-4 h-4 border-2 border-purple-300 border-t-purple-500 rounded-full animate-spin" />
+            변환 중...
+          </div>
+        ) : (
+          <textarea
+            value={transcript}
+            onChange={(e) => onTranscriptChange(e.target.value)}
+            rows={5}
+            placeholder="여기에 직접 입력하거나 위에서 녹음하세요."
+            className="w-full bg-transparent outline-none text-gray-800 text-sm leading-relaxed resize-none placeholder-gray-300"
+          />
+        )}
+      </div>
     </div>
   );
 }
