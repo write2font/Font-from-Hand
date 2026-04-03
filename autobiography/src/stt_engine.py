@@ -56,9 +56,11 @@ class STTEngine:
         print(f"[STT] 변환 시작: {os.path.basename(audio_path)}")
         result = self.model.transcribe(
             audio_path,
-            language="ko",          # 한국어 고정
+            language="ko",
             verbose=False,
             word_timestamps=False,
+            condition_on_previous_text=False,  # 이전 텍스트 참조 끊기 (영어 할루시네이션 방지)
+            no_speech_threshold=0.6,           # 무음 구간 텍스트 생성 억제
         )
 
         transcript_data = self._build_transcript(result, audio_path, user_id)

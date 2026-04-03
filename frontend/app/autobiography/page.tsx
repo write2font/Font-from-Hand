@@ -456,7 +456,7 @@ export default function AutobiographyPage() {
           <SecondaryButton className="flex-1" onClick={() => currentQIdx === 0 ? setStep("image") : setCurrentQIdx((i) => i - 1)}>
             이전
           </SecondaryButton>
-          <PrimaryButton className="flex-1" disabled={!tx.trim()} onClick={() => isLast ? handleQuestionsNext() : setCurrentQIdx((i) => i + 1)}>
+          <PrimaryButton className="flex-1" onClick={() => isLast ? handleQuestionsNext() : setCurrentQIdx((i) => i + 1)}>
             {isLast ? "완료" : "다음 질문"}
           </PrimaryButton>
         </div>
@@ -517,7 +517,7 @@ export default function AutobiographyPage() {
           <SecondaryButton className="flex-1" onClick={() => currentFIdx === 0 ? setStep("questions") : setCurrentFIdx((i) => i - 1)}>
             이전
           </SecondaryButton>
-          <PrimaryButton className="flex-1" disabled={!ftx?.trim()} onClick={() => isLast ? goToKeywords() : setCurrentFIdx((i) => i + 1)}>
+          <PrimaryButton className="flex-1" onClick={() => isLast ? goToKeywords() : setCurrentFIdx((i) => i + 1)}>
             {isLast ? "완료" : "다음 질문"}
           </PrimaryButton>
         </div>
