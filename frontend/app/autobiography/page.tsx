@@ -297,7 +297,8 @@ export default function AutobiographyPage() {
         transcriptions,
         followup_transcriptions: followupTranscriptions,
       });
-      setKeywords(res.data.keywords ?? []);
+      const kws = res.data.keywords;
+      setKeywords(Array.isArray(kws) ? kws : []);
       setSuggestedTitle(res.data.title ?? "");
     } catch {
       setKeywords(["가족", "고향", "청춘", "추억", "성실", "꿈"]);
