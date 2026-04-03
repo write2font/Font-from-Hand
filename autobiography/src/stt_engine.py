@@ -59,7 +59,7 @@ class STTEngine:
             language="ko",
             verbose=False,
             word_timestamps=False,
-            condition_on_previous_text=False,  # 이전 텍스트 참조 끊기 (영어 할루시네이션 방지)
+            condition_on_previous_text=False,  # 영어 할루시네이션 방지
             no_speech_threshold=0.6,           # 무음 구간 텍스트 생성 억제
         )
 
