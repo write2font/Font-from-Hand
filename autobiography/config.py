@@ -18,7 +18,7 @@ OPENAI_BASE_URL = "https://factchat-cloud.mindlogic.ai/v1/gateway"  # 충남대 
 # ─────────────────────────────────────────
 # 2. 모델 설정
 # ─────────────────────────────────────────
-WHISPER_MODEL  = "large-v3"
+WHISPER_MODEL  = "large-v2"
 LLM_MODEL      = "claude-sonnet-4-6"  # 충남대 Gateway - Claude Sonnet
 LLM_MAX_TOKENS = 2000  # 타임아웃 방지
 
