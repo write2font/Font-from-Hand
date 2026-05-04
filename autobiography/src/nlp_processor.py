@@ -113,18 +113,26 @@ class NLPProcessor:
     # ──────────────────────────────────────────
 
     def extract_keyword_candidates(self, transcript_text: str, birth_date_str: str) -> list:
-        """키워드 후보 12개를 추출해서 사용자 선택용으로 반환합니다."""
+        """카테고리별 키워드 후보를 추출해서 사용자 선택용으로 반환합니다."""
         prompt = (
-            f"다음 인터뷰에서 이 사람의 삶을 대표하는 명사 키워드 12개를 추출하라.\n"
-            f"장소, 인물, 사물, 사건, 감정, 활동 등을 포함하라.\n"
-            f"반드시 인터뷰에 실제로 언급된 내용만 사용하라. 없는 내용을 만들지 마라.\n"
-            f"출력 형식: 키워드1,키워드2,...,키워드12 (한국어만, 쉼표 구분, 중복 없음)\n\n"
-            f"인터뷰:\n{transcript_text[:2000]}"
+            f"다음 인터뷰를 읽고, 이 사람의 삶을 대표하는 키워드를 아래 5개 카테고리에서 각 2~3개씩 추출하라.\n"
+            f"반드시 인터뷰에 실제로 언급된 내용만 사용하라. 없는 내용을 절대 만들지 마라.\n\n"
+            f"카테고리:\n"
+            f"1. 장소/배경: 고향·직장·학교 등 삶의 배경이 된 장소\n"
+            f"2. 삶의 가치/좌우명: 인터뷰에 드러난 원칙·교훈·좌우명 (반드시 1개 이상 포함)\n"
+            f"3. 중요한 경험: 기억에 남는 사건·도전·전환점\n"
+            f"4. 정체성/역할: 직업·사회적 역할 (예: 교사, 농부, 사업가)\n"
+            f"5. 감정/분위기: 삶을 관통하는 감정이나 분위기를 나타내는 단어\n\n"
+            f"규칙:\n"
+            f"- 특정 인물 이름이나 단순 관계어(어머니, 아버지 등)는 제외하고, 관계에서 비롯된 의미(효도, 헌신 등)를 담아라.\n"
+            f"- 추상적인 단어(삶, 인생, 추억)보다 구체적인 단어를 우선하라.\n"
+            f"- 출력 형식: 키워드1,키워드2,...,키워드12 (한국어만, 쉼표 구분, 중복 없음)\n\n"
+            f"인터뷰:\n{transcript_text[:2500]}"
         )
         response = client.chat.completions.create(
             model=config.LLM_MODEL,
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=150,
+            max_tokens=200,
         )
         raw = response.choices[0].message.content.strip()
         raw_clean = re.sub(r"[^가-힣,]", "", raw)
@@ -137,7 +145,7 @@ class NLPProcessor:
                 candidates.append(k)
         candidates = candidates[:12]
         if len(candidates) < 3:
-            candidates = ["가족", "고향", "청춘", "추억", "성실", "꿈"]
+            candidates = ["고향", "성실", "도전", "청춘", "인내", "꿈"]
         print(f"[NLP] 키워드 후보 {len(candidates)}개: {candidates}")
         return candidates
 
