@@ -114,33 +114,49 @@ class NLPProcessor:
 
     def extract_keyword_candidates(self, transcript_text: str, birth_date_str: str) -> list:
         """카테고리별 키워드 후보를 추출해서 사용자 선택용으로 반환합니다."""
+        system = (
+            "분석 과정이나 카테고리 설명 없이 "
+            "쉼표로 구분된 한국어 키워드만 한 줄로 출력하십시오."
+        )
         prompt = (
             f"다음 인터뷰를 읽고, 이 사람의 삶을 대표하는 키워드를 아래 5개 카테고리에서 각 2~3개씩 추출하라.\n"
             f"반드시 인터뷰에 실제로 언급된 내용만 사용하라. 없는 내용을 절대 만들지 마라.\n\n"
-            f"카테고리:\n"
+            f"카테고리 (각 2~3개씩, 총 12개):\n"
             f"1. 장소/배경: 고향·직장·학교 등 삶의 배경이 된 장소\n"
-            f"2. 삶의 가치/좌우명: 인터뷰에 드러난 원칙·교훈·좌우명 (반드시 1개 이상 포함)\n"
+            f"2. 삶의 가치/좌우명: 인터뷰에 드러난 원칙·교훈·좌우명 (반드시 1개 이상)\n"
             f"3. 중요한 경험: 기억에 남는 사건·도전·전환점\n"
-            f"4. 정체성/역할: 직업·사회적 역할 (예: 교사, 농부, 사업가)\n"
-            f"5. 감정/분위기: 삶을 관통하는 감정이나 분위기를 나타내는 단어\n\n"
+            f"4. 정체성/역할: 직업·사회적 역할 (예: 교사, 농부, 공학자)\n"
+            f"5. 감정/분위기: 삶을 관통하는 감정이나 분위기\n\n"
             f"규칙:\n"
-            f"- 특정 인물 이름이나 단순 관계어(어머니, 아버지 등)는 제외하고, 관계에서 비롯된 의미(효도, 헌신 등)를 담아라.\n"
-            f"- 추상적인 단어(삶, 인생, 추억)보다 구체적인 단어를 우선하라.\n"
-            f"- 출력 형식: 키워드1,키워드2,...,키워드12 (한국어만, 쉼표 구분, 중복 없음)\n\n"
+            f"- 인물 이름이나 단순 관계어(어머니, 아버지) 대신 그 관계의 의미(헌신, 효도)를 써라.\n"
+            f"- 추상어(삶, 인생)보다 구체어를 우선하라.\n"
+            f"- 출력 형식: 키워드1,키워드2,...,키워드12 (한국어만, 쉼표 구분, 한 줄)\n\n"
             f"인터뷰:\n{transcript_text[:2500]}"
         )
         response = client.chat.completions.create(
             model=config.LLM_MODEL,
-            messages=[{"role": "user", "content": prompt}],
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user",   "content": prompt},
+            ],
             max_tokens=200,
         )
         raw = response.choices[0].message.content.strip()
+
+        # 카테고리 레이블 방식("장소: X, Y\n가치: Z") 대응 — 콜론 뒤 값만 추출
+        if ":" in raw and "," not in raw.split("\n")[0]:
+            parts = []
+            for line in raw.split("\n"):
+                after_colon = line.split(":", 1)[-1] if ":" in line else line
+                parts.extend(after_colon.split(","))
+            raw = ",".join(parts)
+
         raw_clean = re.sub(r"[^가-힣,]", "", raw)
         seen = set()
         candidates = []
         for k in raw_clean.split(","):
             k = k.strip()
-            if len(k) >= 2 and k not in seen:
+            if 2 <= len(k) <= 8 and k not in seen:
                 seen.add(k)
                 candidates.append(k)
         candidates = candidates[:12]
