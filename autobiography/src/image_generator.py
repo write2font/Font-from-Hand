@@ -41,13 +41,12 @@ class ImageGenerator:
         print("[이미지] 충남대 Gateway로 이미지 생성 중... (10~30초)")
         return self._call_gateway(prompt, output_path)
 
-    # 매번 다른 스타일을 선택하기 위한 스타일 목록
+    # 손으로 그린 느낌을 살리는 스타일만 사용 (AI 티 최소화)
     _STYLES = [
-        ("watercolor", "soft watercolor illustration, delicate brushstrokes, translucent layers, gentle color washes"),
-        ("oil_painting", "impressionist oil painting, rich textured brushwork, vibrant yet warm tones, painterly style"),
-        ("korean_ink", "Korean ink wash painting, minimalist brushwork, misty mountains, subtle ink gradients, hanji texture"),
-        ("gouache", "gouache illustration, flat warm colors, graphic yet painterly, folk art inspired"),
-        ("pencil_sketch", "detailed pencil and watercolor sketch, soft hand-drawn lines, gentle color washes, intimate feel"),
+        ("korean_ink", "Korean ink wash painting on hanji paper, minimalist brushwork, misty atmosphere, subtle ink gradients, traditional East Asian art"),
+        ("pencil_watercolor", "hand-drawn pencil sketch with loose watercolor washes, visible pencil lines, imperfect organic feel, sketchbook style"),
+        ("woodblock", "Korean woodblock print style, bold outlines, limited earthy colors, folk art texture, handmade feel"),
+        ("gouache_folk", "Korean folk painting style, flat warm earthy tones, naive art, handcrafted illustration, minhwa inspired"),
     ]
 
     def _make_prompt(self, keywords, summary_text, cover_title=None) -> str:
@@ -66,11 +65,11 @@ class ImageGenerator:
             f"1. 제목과 키워드의 정서를 자연/사물/풍경으로 시각화 (하늘, 들판, 나무, 빛, 바람, 꽃, 강, 산 등)\n"
             f"2. 위에 지정된 스타일을 반드시 반영할 것\n"
             f"3. 사람, 건물, 글자 절대 없음\n"
-            f"4. 키워드마다 다른 장면이 나오도록 창의적으로 구성\n"
+            f"4. 포토리얼리즘·3D렌더·디지털 느낌 완전 배제. 손으로 그린 느낌만.\n"
             f"5. 50단어 이내 영어로만. 프롬프트 텍스트만 출력.\n\n"
-            f"예시 (키워드: 중장비, 고향, 성실):\n"
-            f"'wide open construction site at golden hour, distant mountains, "
-            f"warm dust in the air, {style_desc}'\n"
+            f"예시 (키워드: 축구, 고향, 끈기):\n"
+            f"'empty schoolyard at dusk, single worn soccer ball on cracked asphalt, "
+            f"distant hills, {style_desc}'\n"
         )
         try:
             resp = client_llm.chat.completions.create(
@@ -83,15 +82,15 @@ class ImageGenerator:
         except Exception as e:
             print(f"[이미지] 프롬프트 생성 실패 ({e}) → 기본값 사용")
             base = (
-                "peaceful countryside path lined with wildflowers, "
-                f"warm golden afternoon light through tree canopy, soft breeze, {style_desc}"
+                "quiet village path at dusk, single lantern glowing, "
+                f"autumn leaves drifting, {style_desc}"
             )
 
         return (
             base
             + f", {style_desc}, "
             + "book cover art, no people, no buildings, no text, no letters, "
-            + "high quality, masterpiece"
+            + "hand-drawn, not photorealistic, not 3D rendered"
         )
 
     def _call_gateway(self, prompt: str, output_path: str) -> str | None:
