@@ -48,7 +48,7 @@ export default function AutobiographyResultPage() {
         <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-gray-100 mb-8">
           <h3 className="text-lg font-bold mb-6">미리보기</h3>
           <iframe
-            src="http://localhost:8080/api/v1/autobiography/download"
+            src="http://localhost:8080/api/v1/autobiography/download?inline=true"
             className="w-full rounded-2xl border border-gray-100"
             style={{ height: "600px" }}
             title="자서전 미리보기"

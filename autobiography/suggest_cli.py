@@ -37,8 +37,11 @@ def main():
         from src.nlp_processor import NLPProcessor
         nlp = NLPProcessor()
 
+        selected_keywords = data.get("selected_keywords", []) or None
+
         keywords = nlp.extract_keyword_candidates(transcript_text, birth)
-        title    = nlp._generate_cover_title(transcript_text, {}, name, birth.split("-")[0])
+        title    = nlp._generate_cover_title(transcript_text, {}, name, birth.split("-")[0],
+                                              selected_keywords=selected_keywords)
 
         print(json.dumps({"keywords": keywords, "title": title}, ensure_ascii=False))
 

@@ -202,9 +202,11 @@ public class AutobiographyController {
         }
     }
 
-    // ── 4. PDF 다운로드 ───────────────────────────────────────────────────────────
+    // ── 4. PDF 다운로드 / 미리보기 ──────────────────────────────────────────────────
     @GetMapping("/download")
-    public ResponseEntity<Resource> download() {
+    public ResponseEntity<Resource> download(
+            @RequestParam(value = "inline", defaultValue = "false") boolean inline
+    ) {
         try {
             Path latestTxt = Paths.get(autoDir, "output", "latest_pdf.txt");
             if (!Files.exists(latestTxt)) {
@@ -217,10 +219,11 @@ public class AutobiographyController {
                 return ResponseEntity.notFound().build();
             }
 
+            String disposition = inline ? "inline" : "attachment; filename=\"autobiography.pdf\"";
             Resource resource = new UrlResource(pdfFile.toURI());
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_PDF)
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"autobiography.pdf\"")
+                    .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
                     .body(resource);
 
         } catch (Exception e) {

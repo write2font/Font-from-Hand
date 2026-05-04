@@ -77,6 +77,7 @@ export default function AutobiographyPage() {
   const [selectedKeywords, setSelectedKeywords] = useState<Set<string>>(new Set());
   const [suggestedTitle, setSuggestedTitle]   = useState("");
   const [loadingKeywords, setLoadingKeywords] = useState(false);
+  const [regeneratingTitle, setRegeneratingTitle] = useState(false);
 
   // Generating
   const [progress, setProgress]         = useState(0);
@@ -317,6 +318,24 @@ export default function AutobiographyPage() {
     });
   };
 
+  const regenerateTitle = async () => {
+    if (selectedKeywords.size === 0) return;
+    setRegeneratingTitle(true);
+    try {
+      const res = await axios.post("http://localhost:8080/api/v1/autobiography/suggest", {
+        name, birth: birthDate,
+        transcriptions,
+        followup_transcriptions: followupTranscriptions,
+        selected_keywords: Array.from(selectedKeywords),
+      });
+      setSuggestedTitle(res.data.title ?? suggestedTitle);
+    } catch {
+      // 실패 시 기존 제목 유지
+    } finally {
+      setRegeneratingTitle(false);
+    }
+  };
+
   const handleGenerate = async () => {
     setStep("generating");
     setProgress(0);
@@ -538,7 +557,7 @@ export default function AutobiographyPage() {
       ) : (
         <>
           <div className="bg-gray-100 rounded-2xl p-6 mb-6">
-            <p className="text-xs text-gray-400 mb-4">3개를 선택하세요 ({selectedKeywords.size}/3)</p>
+            <p className="text-xs text-gray-400 mb-4">2~3개를 선택하세요 ({selectedKeywords.size}/3)</p>
             <div className="grid grid-cols-3 gap-3">
               {keywords.map((kw) => (
                 <button key={kw} onClick={() => toggleKeyword(kw)}
@@ -550,15 +569,30 @@ export default function AutobiographyPage() {
               ))}
             </div>
           </div>
-          <FieldCard label="예상 제목">
-            <input type="text" value={suggestedTitle} readOnly
-              className="w-full bg-transparent outline-none text-gray-800 text-base cursor-default" />
-          </FieldCard>
+          <div className="bg-gray-100 rounded-2xl p-6 mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-bold text-gray-600">예상 제목</p>
+              <button
+                onClick={regenerateTitle}
+                disabled={selectedKeywords.size === 0 || regeneratingTitle}
+                className="text-xs text-purple-400 hover:text-purple-600 disabled:text-gray-300 transition"
+              >
+                {regeneratingTitle ? "생성 중..." : "키워드로 재생성"}
+              </button>
+            </div>
+            <input
+              type="text"
+              value={suggestedTitle}
+              onChange={(e) => setSuggestedTitle(e.target.value)}
+              className="w-full bg-transparent outline-none text-gray-800 text-base"
+              placeholder="제목을 직접 입력하거나 재생성하세요"
+            />
+          </div>
           <div className="flex gap-3 mt-8">
             <SecondaryButton className="flex-1" onClick={() => followupQuestions.length > 0 ? setStep("followup") : setStep("questions")}>
               이전
             </SecondaryButton>
-            <PrimaryButton className="flex-1" disabled={selectedKeywords.size !== 3} onClick={handleGenerate}>
+            <PrimaryButton className="flex-1" disabled={selectedKeywords.size < 2} onClick={handleGenerate}>
               자서전 생성 시작
             </PrimaryButton>
           </div>
