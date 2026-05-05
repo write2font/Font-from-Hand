@@ -1,0 +1,43 @@
+from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+
+# 기본 매핑: ASCII 94 + 한글 2350 = 2444
+DEFAULT_MAPPING_PATH = SCRIPT_DIR / "mapping.txt"
+
+# 셀 안쪽에서 템플릿 선/외곽 영향을 줄이기 위한 1차 crop
+INNER_CROP_RATIO_X = 0.03
+INNER_CROP_RATIO_Y = 0.03
+INNER_CROP_MIN_PX = 3
+
+# 고정 그리드 crop에서 각 셀 테두리를 한 번 더 제외할 비율
+CELL_MARGIN_RATIO_X = 0.08
+CELL_MARGIN_RATIO_Y = 0.08
+
+# 정규화 캔버스
+# 1024는 너무 무겁기 때문에 512로 줄였습니다.
+CANVAS_SIZE = 512
+NORMALIZE_PADDING_RATIO = 0.08
+NORMALIZE_VERTICAL_SHIFT_RATIO = 0.0
+
+# 노이즈 제거 / 형태 보정
+COMPONENT_MIN_AREA_ABS = 8
+COMPONENT_MIN_AREA_DIVISOR = 6000
+BORDER_CLEAR_PX = 4
+MORPH_CLOSE_KERNEL = 3
+
+# 폰트 메트릭
+FONT_EM = 1000
+FONT_ASCENT = 800
+FONT_DESCENT = 200
+FONT_TOP_PADDING = 20
+FONT_BOTTOM_PADDING = 0
+FONT_LSB = 40
+FONT_RSB = 40
+FONT_INNER_MAX_WIDTH = 840
+FONT_MIN_ADVANCE_WIDTH = 560
+FONT_MAX_ADVANCE_WIDTH = 920
+
+# 외부 도구 기본 이름 (PATH에 있으면 그대로 사용)
+DEFAULT_POTRACE_CMD = "potrace"
+DEFAULT_FONTFORGE_CMD = "fontforge"
