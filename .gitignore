@@ -15,6 +15,6 @@ build/
 .gradle/
 bin/
 
-# 4. 파이썬 (Font-Engine) 
+# 4. 파이썬 (Font-Engine)
 __pycache__/
 venv/
