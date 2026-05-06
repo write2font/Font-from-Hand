@@ -1,12 +1,40 @@
 "use client";
 
-import React from "react";
+import { useEffect, useState } from "react";
 import { Check, Download, Info, ArrowRight } from "lucide-react";
+import api from "@/app/lib/axios";
 
 export default function ResultPage() {
-  const handleDownloadTTF = () => {
-    const downloadUrl = "http://localhost:8080/api/v1/fonts/download";
-    window.location.href = downloadUrl;
+  const [fontId, setFontId] = useState<string | null>(null);
+  const [fontName, setFontName] = useState("MyFont");
+
+  useEffect(() => {
+    const id = localStorage.getItem("lastFontId");
+    const name = localStorage.getItem("lastFontName");
+    if (id) setFontId(id);
+    if (name) setFontName(name);
+  }, []);
+
+  const handleDownloadTTF = async () => {
+    if (!fontId) {
+      alert("다운로드할 폰트 정보가 없습니다.");
+      return;
+    }
+    try {
+      const response = await api.get(`/fonts/download/${fontId}`, {
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${fontName}.ttf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch {
+      alert("다운로드 중 오류가 발생했습니다.");
+    }
   };
 
   const handleDownloadWOFF2 = () => {
@@ -68,7 +96,7 @@ export default function ResultPage() {
           <h3 className="text-lg font-bold mb-6">다운로드</h3>
           <div className="flex flex-col gap-4">
             <DownloadButton
-              label="MyFont.ttf"
+              label={`${fontName}.ttf`}
               subLabel="TTF 포맷"
               onClick={handleDownloadTTF}
             />
