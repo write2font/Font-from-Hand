@@ -21,6 +21,7 @@ export default function ScanPage() {
   const [selectedMethod, setSelectedMethod] = useState<"upload" | "draw" | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [fontName, setFontName] = useState("");
+  const [fontNameError, setFontNameError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -56,7 +57,7 @@ export default function ScanPage() {
       return;
     }
     if (!fontName.trim()) {
-      alert("폰트 이름을 입력해 주세요!");
+      setFontNameError(true);
       return;
     }
     setIsProcessing(true);
@@ -202,14 +203,27 @@ export default function ScanPage() {
               </div>
 
               <div className="mt-8">
-                <label className="block text-sm font-bold text-gray-700 mb-2">폰트 이름</label>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  폰트 이름 <span className="text-red-400">*</span>
+                </label>
                 <input
                   type="text"
                   value={fontName}
-                  onChange={(e) => setFontName(e.target.value)}
+                  onChange={(e) => {
+                    setFontName(e.target.value);
+                    if (e.target.value.trim()) setFontNameError(false);
+                  }}
+                  onBlur={() => { if (!fontName.trim()) setFontNameError(true); }}
                   placeholder="예: 할머니체, 내손글씨"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-400 text-gray-800"
+                  className={`w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 text-gray-800 transition ${
+                    fontNameError
+                      ? "border-red-400 focus:ring-red-300"
+                      : "border-gray-200 focus:ring-brand-400"
+                  }`}
                 />
+                {fontNameError && (
+                  <p className="text-red-400 text-xs mt-1.5">폰트 이름을 입력해 주세요.</p>
+                )}
               </div>
 
               {selectedFiles.length > 0 && (
