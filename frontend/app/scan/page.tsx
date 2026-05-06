@@ -11,7 +11,7 @@ import {
   Loader2,
   CheckCircle2,
 } from "lucide-react";
-import axios from "axios";
+import api from "@/app/lib/axios";
 import { useRouter } from "next/navigation";
 
 export default function ScanPage() {
@@ -20,6 +20,7 @@ export default function ScanPage() {
     "upload" | "draw" | null
   >(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [fontName, setFontName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [isProcessing, setIsProcessing] = useState(false);
@@ -58,6 +59,10 @@ export default function ScanPage() {
       alert("파일을 먼저 업로드해 주세요!");
       return;
     }
+    if (!fontName.trim()) {
+      alert("폰트 이름을 입력해 주세요!");
+      return;
+    }
 
     setIsProcessing(true);
     setProgress(0);
@@ -66,24 +71,20 @@ export default function ScanPage() {
     selectedFiles.forEach((file) => {
       formData.append("files", file);
     });
+    formData.append("fontName", fontName.trim());
+    formData.append("type", "MANUAL");
 
     try {
-      const response = await axios.post(
-        "http://localhost:8080/api/v1/fonts/upload",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        },
-      );
-      if (response.status === 200) {
-        setProgress(100);
-        setTimeout(() => {
-          alert("성공적으로 폰트가 생성되었습니다!");
-          router.push("/scan/result");
-        }, 500);
-      }
+      const response = await api.post("/fonts/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+        timeout: 600000,
+      });
+      setProgress(100);
+      localStorage.setItem("lastFontId", response.data.fontId);
+      localStorage.setItem("lastFontName", response.data.fontName);
+      setTimeout(() => {
+        router.push("/scan/result");
+      }, 500);
     } catch (error) {
       console.error("전송 실패:", error);
       alert("폰트 생성 중 서버 오류가 발생했습니다.");
@@ -205,6 +206,19 @@ export default function ScanPage() {
                   클릭하여 이미지들을 선택하세요
                 </p>
                 <p className="text-gray-400 text-xs">최대 18장 권장</p>
+              </div>
+
+              <div className="mt-8">
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  폰트 이름
+                </label>
+                <input
+                  type="text"
+                  value={fontName}
+                  onChange={(e) => setFontName(e.target.value)}
+                  placeholder="예: 할머니체, 내손글씨"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-800"
+                />
               </div>
 
               {selectedFiles.length > 0 && (
