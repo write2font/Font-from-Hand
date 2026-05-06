@@ -178,10 +178,23 @@ export default function ScanPage() {
                 <li>• 해상도는 최소 1200x1200 이상을 권장합니다.</li>
                 <li>• JPG, PNG 형식을 지원합니다.</li>
               </ul>
-              <button className="flex items-center gap-2 px-6 py-3 bg-purple-100 text-purple-600 font-bold rounded-xl hover:bg-purple-200 transition">
-                <Download size={18} />
-                템플릿 다운로드 (PDF)
-              </button>
+              <div className="flex flex-wrap gap-3">
+                {[
+                  { label: "PDF", href: "/templates/handwriting_template.pdf" },
+                  { label: "PNG", href: "/templates/handwriting_template.png" },
+                  { label: "PPTX", href: "/templates/handwriting_template.pptx" },
+                ].map(({ label, href }) => (
+                  <a
+                    key={label}
+                    href={href}
+                    download
+                    className="flex items-center gap-2 px-6 py-3 bg-purple-100 text-purple-600 font-bold rounded-xl hover:bg-purple-200 transition"
+                  >
+                    <Download size={18} />
+                    템플릿 다운로드 ({label})
+                  </a>
+                ))}
+              </div>
             </div>
             <div className="bg-white p-10 rounded-3xl shadow-sm border border-gray-100">
               <h2 className="text-lg font-bold mb-6">템플릿 이미지 업로드</h2>
