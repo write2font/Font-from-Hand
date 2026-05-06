@@ -13,16 +13,15 @@ import {
 } from "lucide-react";
 import api from "@/app/lib/axios";
 import { useRouter } from "next/navigation";
+import PageHeader from "@/components/ui/PageHeader";
+import StepItem from "@/components/ui/StepItem";
 
 export default function ScanPage() {
   const router = useRouter();
-  const [selectedMethod, setSelectedMethod] = useState<
-    "upload" | "draw" | null
-  >(null);
+  const [selectedMethod, setSelectedMethod] = useState<"upload" | "draw" | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [fontName, setFontName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
-
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
 
@@ -39,14 +38,11 @@ export default function ScanPage() {
     return () => clearInterval(interval);
   }, [isProcessing]);
 
-  const onUploadClick = () => {
-    fileInputRef.current?.click();
-  };
+  const onUploadClick = () => fileInputRef.current?.click();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const filesArray = Array.from(e.target.files);
-      setSelectedFiles((prev) => [...prev, ...filesArray]);
+      setSelectedFiles((prev) => [...prev, ...Array.from(e.target.files!)]);
     }
   };
 
@@ -63,14 +59,11 @@ export default function ScanPage() {
       alert("폰트 이름을 입력해 주세요!");
       return;
     }
-
     setIsProcessing(true);
     setProgress(0);
 
     const formData = new FormData();
-    selectedFiles.forEach((file) => {
-      formData.append("files", file);
-    });
+    selectedFiles.forEach((file) => formData.append("files", file));
     formData.append("fontName", fontName.trim());
     formData.append("type", "MANUAL");
 
@@ -82,9 +75,7 @@ export default function ScanPage() {
       setProgress(100);
       localStorage.setItem("lastFontId", response.data.fontId);
       localStorage.setItem("lastFontName", response.data.fontName);
-      setTimeout(() => {
-        router.push("/scan/result");
-      }, 500);
+      setTimeout(() => router.push("/scan/result"), 500);
     } catch (error) {
       console.error("전송 실패:", error);
       alert("폰트 생성 중 서버 오류가 발생했습니다.");
@@ -98,15 +89,11 @@ export default function ScanPage() {
         <div className="bg-white p-12 rounded-[2.5rem] shadow-sm border border-gray-100 max-w-lg w-full text-center animate-in fade-in zoom-in-95 duration-500">
           <div className="relative w-24 h-24 mx-auto mb-8">
             {progress === 100 ? (
-              <CheckCircle2
-                size={96}
-                className="text-emerald-500 animate-in zoom-in"
-              />
+              <CheckCircle2 size={96} className="text-emerald-500 animate-in zoom-in" />
             ) : (
-              <Loader2 size={96} className="text-purple-500 animate-spin" />
+              <Loader2 size={96} className="text-brand-500 animate-spin" />
             )}
           </div>
-
           <h1 className="text-2xl font-bold mb-4 text-gray-800">
             {progress === 100 ? "폰트 생성 완료!" : "폰트를 생성하고 있어요"}
           </h1>
@@ -115,33 +102,31 @@ export default function ScanPage() {
               ? "결과 페이지로 이동합니다..."
               : "글자를 분석하고 조합하는 중입니다. 창을 닫지 말고 잠시만 기다려주세요! (약 3~5분 소요)"}
           </p>
-
           <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden mb-3">
             <div
-              className="h-full bg-purple-600 transition-all duration-300 ease-out"
+              className="h-full bg-brand-600 transition-all duration-300 ease-out"
               style={{ width: `${progress}%` }}
             />
           </div>
-          <p className="text-sm font-bold text-purple-600">{progress}%</p>
+          <p className="text-sm font-bold text-brand-600">{progress}%</p>
         </div>
       </div>
     );
   }
+
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       <main className="max-w-5xl mx-auto px-6 pt-16">
-        <div className="mb-12">
-          <h1 className="text-3xl font-bold mb-4">직접 작성 폰트 만들기</h1>
-          <p className="text-gray-500">
-            템플릿을 다운로드하고 손글씨를 작성하여 폰트를 제작합니다.
-          </p>
-        </div>
+        <PageHeader
+          title="직접 작성 폰트 만들기"
+          subtitle="템플릿을 다운로드하고 손글씨를 작성하여 폰트를 제작합니다."
+        />
 
         <div className="flex justify-between items-center mb-16 px-10">
-          <StepItem number={1} label="업로드/작성" isActive={true} />
-          <div className="flex-1 h-[1px] bg-gray-200 mx-4" />
+          <StepItem number={1} label="업로드/작성" isActive />
+          <div className="flex-1 h-px bg-gray-200 mx-4" />
           <StepItem number={2} label="처리" />
-          <div className="flex-1 h-[1px] bg-gray-200 mx-4" />
+          <div className="flex-1 h-px bg-gray-200 mx-4" />
           <StepItem number={3} label="결과" />
         </div>
 
@@ -168,7 +153,7 @@ export default function ScanPage() {
         {selectedMethod === "upload" && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="bg-white p-10 rounded-3xl shadow-sm border border-gray-100">
-              <div className="flex items-center gap-2 mb-6 text-purple-600 font-bold">
+              <div className="flex items-center gap-2 mb-6 text-brand-600 font-bold">
                 <Info size={20} />
                 <span>촬영 가이드</span>
               </div>
@@ -188,7 +173,7 @@ export default function ScanPage() {
                     key={label}
                     href={href}
                     download
-                    className="flex items-center gap-2 px-6 py-3 bg-purple-100 text-purple-600 font-bold rounded-xl hover:bg-purple-200 transition"
+                    className="flex items-center gap-2 px-6 py-3 bg-brand-100 text-brand-600 font-bold rounded-xl hover:bg-brand-200 transition"
                   >
                     <Download size={18} />
                     템플릿 다운로드 ({label})
@@ -196,6 +181,7 @@ export default function ScanPage() {
                 ))}
               </div>
             </div>
+
             <div className="bg-white p-10 rounded-3xl shadow-sm border border-gray-100">
               <h2 className="text-lg font-bold mb-6">템플릿 이미지 업로드</h2>
               <input
@@ -206,31 +192,23 @@ export default function ScanPage() {
                 onChange={handleFileChange}
                 accept="image/*"
               />
-
               <div
                 onClick={onUploadClick}
-                className="border-2 border-dashed border-gray-200 rounded-3xl py-20 flex flex-col items-center justify-center cursor-pointer hover:border-purple-300 hover:bg-purple-50 transition group"
+                className="border-2 border-dashed border-gray-200 rounded-3xl py-20 flex flex-col items-center justify-center cursor-pointer hover:border-brand-300 hover:bg-brand-50 transition group"
               >
-                <UploadCloud
-                  size={48}
-                  className="text-gray-300 mb-4 group-hover:text-purple-400"
-                />
-                <p className="text-gray-600 font-medium mb-1">
-                  클릭하여 이미지들을 선택하세요
-                </p>
+                <UploadCloud size={48} className="text-gray-300 mb-4 group-hover:text-brand-400" />
+                <p className="text-gray-600 font-medium mb-1">클릭하여 이미지들을 선택하세요</p>
                 <p className="text-gray-400 text-xs">최대 18장 권장</p>
               </div>
 
               <div className="mt-8">
-                <label className="block text-sm font-bold text-gray-700 mb-2">
-                  폰트 이름
-                </label>
+                <label className="block text-sm font-bold text-gray-700 mb-2">폰트 이름</label>
                 <input
                   type="text"
                   value={fontName}
                   onChange={(e) => setFontName(e.target.value)}
                   placeholder="예: 할머니체, 내손글씨"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-800"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-400 text-gray-800"
                 />
               </div>
 
@@ -246,12 +224,10 @@ export default function ScanPage() {
                         className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100"
                       >
                         <div className="flex items-center gap-3 truncate">
-                          <div className="w-8 h-8 bg-purple-100 text-purple-600 flex items-center justify-center rounded-lg font-bold text-xs shrink-0">
+                          <div className="w-8 h-8 bg-brand-100 text-brand-600 flex items-center justify-center rounded-lg font-bold text-xs shrink-0">
                             {index + 1}
                           </div>
-                          <span className="text-sm text-gray-700 truncate">
-                            {file.name}
-                          </span>
+                          <span className="text-sm text-gray-700 truncate">{file.name}</span>
                         </div>
                         <button
                           onClick={() => removeFile(index)}
@@ -262,10 +238,9 @@ export default function ScanPage() {
                       </div>
                     ))}
                   </div>
-
                   <button
                     onClick={handleStartGeneration}
-                    className="w-full mt-10 py-5 bg-purple-600 text-white font-bold rounded-2xl hover:bg-purple-700 transition shadow-lg shadow-purple-100"
+                    className="w-full mt-10 py-5 bg-brand-600 text-white font-bold rounded-2xl hover:bg-brand-700 transition shadow-lg shadow-brand-100"
                   >
                     폰트 생성 시작하기
                   </button>
@@ -279,34 +254,17 @@ export default function ScanPage() {
   );
 }
 
-function StepItem({ number, label, isActive = false }: any) {
-  return (
-    <div className="flex flex-col items-center gap-3">
-      <div
-        className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${isActive ? "bg-purple-600 text-white" : "bg-gray-100 text-gray-400"}`}
-      >
-        {number}
-      </div>
-      <span
-        className={`text-sm font-medium ${isActive ? "text-gray-900" : "text-gray-400"}`}
-      >
-        {label}
-      </span>
-    </div>
-  );
-}
-
 function MethodCard({ icon, title, description, isSelected, onClick }: any) {
   return (
     <div
       onClick={onClick}
-      className={`p-8 rounded-2xl border-2 cursor-pointer transition-all ${isSelected ? "border-purple-500 bg-purple-50/30 shadow-inner" : "border-gray-100 hover:border-purple-200"}`}
+      className={`p-8 rounded-2xl border-2 cursor-pointer transition-all ${
+        isSelected
+          ? "border-brand-500 bg-brand-50/30 shadow-inner"
+          : "border-gray-100 hover:border-brand-200"
+      }`}
     >
-      <div
-        className={`mb-4 ${isSelected ? "text-purple-600" : "text-gray-400"}`}
-      >
-        {icon}
-      </div>
+      <div className={`mb-4 ${isSelected ? "text-brand-600" : "text-gray-400"}`}>{icon}</div>
       <h3 className="text-lg font-bold mb-2">{title}</h3>
       <p className="text-sm text-gray-500">{description}</p>
     </div>
