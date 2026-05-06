@@ -5,6 +5,7 @@ import { Check, Download, Info, ArrowRight } from "lucide-react";
 import api from "@/app/lib/axios";
 import PageHeader from "@/components/ui/PageHeader";
 import StepItem from "@/components/ui/StepItem";
+import Button from "@/components/ui/Button";
 
 export default function ResultPage() {
   const [fontId, setFontId] = useState<string | null>(null);
@@ -105,10 +106,10 @@ export default function ResultPage() {
               </p>
             </div>
           </div>
-          <button className="flex items-center gap-2 px-6 py-3 bg-brand-100 text-brand-600 font-bold rounded-2xl hover:bg-brand-200 transition text-sm">
+          <Button variant="secondary" className="flex items-center gap-2">
             AI 폰트 생성 알아보기
             <ArrowRight size={16} />
-          </button>
+          </Button>
         </div>
       </main>
     </div>
@@ -117,13 +118,10 @@ export default function ResultPage() {
 
 function DownloadButton({ label, subLabel, onClick }: { label: string; subLabel: string; onClick: () => void }) {
   return (
-    <button
-      onClick={onClick}
-      className="w-full flex items-center justify-center gap-3 py-5 bg-brand-500 text-white font-bold rounded-2xl hover:bg-brand-600 transition shadow-lg shadow-brand-100"
-    >
+    <Button size="lg" onClick={onClick} className="flex items-center justify-center gap-3">
       <Download size={20} />
       <span>{label}</span>
       <span className="text-brand-200 text-xs font-normal ml-1">{subLabel}</span>
-    </button>
+    </Button>
   );
 }

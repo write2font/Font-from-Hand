@@ -15,6 +15,7 @@ import api from "@/app/lib/axios";
 import { useRouter } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
 import StepItem from "@/components/ui/StepItem";
+import Button from "@/components/ui/Button";
 
 export default function ScanPage() {
   const router = useRouter();
@@ -252,12 +253,9 @@ export default function ScanPage() {
                       </div>
                     ))}
                   </div>
-                  <button
-                    onClick={handleStartGeneration}
-                    className="w-full mt-10 py-5 bg-brand-600 text-white font-bold rounded-2xl hover:bg-brand-700 transition shadow-lg shadow-brand-100"
-                  >
+                  <Button size="lg" onClick={handleStartGeneration} className="mt-10">
                     폰트 생성 시작하기
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>

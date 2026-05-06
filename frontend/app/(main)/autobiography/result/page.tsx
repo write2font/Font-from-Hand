@@ -4,6 +4,7 @@ import { Check, Download, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import PageHeader from "@/components/ui/PageHeader";
 import StepItem from "@/components/ui/StepItem";
+import Button from "@/components/ui/Button";
 
 export default function AutobiographyResultPage() {
   const handleDownload = () => {
@@ -50,20 +51,17 @@ export default function AutobiographyResultPage() {
 
         <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-gray-100 mb-8">
           <h3 className="text-lg font-bold mb-6">다운로드</h3>
-          <button
-            onClick={handleDownload}
-            className="w-full flex items-center justify-center gap-3 py-5 bg-brand-600 text-white font-bold rounded-2xl hover:bg-brand-700 transition shadow-lg shadow-brand-100"
-          >
+          <Button size="lg" onClick={handleDownload} className="flex items-center justify-center gap-3">
             <Download size={20} />
-            <span>자서전 PDF 다운로드</span>
-          </button>
+            자서전 PDF 다운로드
+          </Button>
         </div>
 
         <Link href="/autobiography">
-          <button className="flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-600 font-bold rounded-2xl hover:bg-gray-200 transition text-sm">
+          <Button variant="ghost" className="flex items-center gap-2">
             <ArrowLeft size={16} />
             새 자서전 만들기
-          </button>
+          </Button>
         </Link>
       </main>
     </div>
