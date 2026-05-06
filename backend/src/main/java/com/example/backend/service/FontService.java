@@ -41,6 +41,8 @@ public class FontService {
             throw new RuntimeException("파이썬 폰트 생성 중 에러 발생");
         }
 
+        deleteJpgFiles(uploadPath);
+
         fontRepository.save(new Font(user, fontName, fontId, outputTtfPath, type));
         return fontId;
     }
@@ -92,6 +94,15 @@ public class FontService {
                 saveName = originalName;
             }
             file.transferTo(new File(uploadPath + File.separator + saveName));
+        }
+    }
+
+    private void deleteJpgFiles(String uploadPath) {
+        File[] jpgFiles = new File(uploadPath).listFiles(
+            f -> f.getName().toLowerCase().endsWith(".jpg") || f.getName().toLowerCase().endsWith(".jpeg")
+        );
+        if (jpgFiles != null) {
+            for (File jpg : jpgFiles) jpg.delete();
         }
     }
 
