@@ -1,5 +1,9 @@
 package com.example.backend.controller;
 
+import com.example.backend.dto.FontListResponse;
+import com.example.backend.entity.Font;
+import com.example.backend.service.FontService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
@@ -8,122 +12,79 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.InputStreamReader;
-import java.nio.file.Paths;
 import java.util.List;
-import java.util.UUID;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/fonts")
 @CrossOrigin(origins = "http://localhost:3000")
+@RequiredArgsConstructor
 public class FontController {
 
-  @PostMapping("/upload")
-  public String uploadImages(@RequestParam("files") List<MultipartFile> files) {
-    if (files == null || files.isEmpty()) {
-      return "실패: 업로드할 이미지가 없습니다.";
-    }
+    private final FontService fontService;
 
-    try {
-      String jobId = UUID.randomUUID().toString();
-      String baseDir = System.getProperty("user.dir"); // FFH/backend 폴더
-      String uploadPath = Paths.get(baseDir, "uploads", jobId).toString();
-
-      saveFiles(files, uploadPath);
-
-      String pythonScriptPath = Paths.get(baseDir, "..", "font-engine", "main.py").normalize().toString();
-      String outputTtfPath = Paths.get(uploadPath, "MyHandwriting.ttf").toString();
-
-      boolean isSuccess = runPythonEngine(pythonScriptPath, uploadPath, outputTtfPath);
-
-      if (isSuccess) {
-        return "성공: 폰트 생성 완료! (ID: " + jobId + ")";
-      } else {
-        return "실패: 파이썬 폰트 생성 중 에러 발생";
-      }
-
-    } catch (Exception e) {
-      e.printStackTrace();
-      return "에러 발생: " + e.getMessage();
-    }
-  }
-
-  @GetMapping("/download")
-  public ResponseEntity<Resource> downloadFont() {
-    try {
-      String baseDir = System.getProperty("user.dir");
-      File uploadsDir = new File(baseDir, "uploads");
-
-      File[] jobDirs = uploadsDir.listFiles(File::isDirectory);
-      if (jobDirs == null || jobDirs.length == 0) {
-        return ResponseEntity.notFound().build();
-      }
-
-      File latestDir = jobDirs[0];
-      for (File dir : jobDirs) {
-        if (dir.lastModified() > latestDir.lastModified()) {
-          latestDir = dir;
+    @PostMapping("/upload")
+    public ResponseEntity<?> uploadImages(
+        @RequestParam("files") List<MultipartFile> files,
+        @RequestParam("fontName") String fontName,
+        @RequestParam(value = "type", defaultValue = "MANUAL") Font.FontType type,
+        @CookieValue(name = "accessToken", required = false) String token
+    ) {
+        if (token == null) {
+            return ResponseEntity.status(401).body("로그인이 필요합니다.");
         }
-      }
-
-      File ttfFile = new File(latestDir, "MyHandwriting.ttf");
-      if (!ttfFile.exists()) {
-        return ResponseEntity.notFound().build();
-      }
-
-      Resource resource = new UrlResource(ttfFile.toURI());
-
-      return ResponseEntity.ok()
-        .contentType(MediaType.APPLICATION_OCTET_STREAM)
-        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"MyHandwriting.ttf\"")
-        .body(resource);
-
-    } catch (Exception e) {
-      e.printStackTrace();
-      return ResponseEntity.internalServerError().build();
+        if (files == null || files.isEmpty()) {
+            return ResponseEntity.badRequest().body("업로드할 이미지가 없습니다.");
+        }
+        try {
+            String fontId = fontService.uploadFont(files, token, fontName, type);
+            return ResponseEntity.ok(Map.of("fontId", fontId, "fontName", fontName, "message", "폰트 생성 완료"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(401).body(e.getMessage());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body("에러 발생: " + e.getMessage());
+        }
     }
-  }
 
-  private void saveFiles(List<MultipartFile> files, String uploadPath) throws Exception {
-    File directory = new File(uploadPath);
-    if (!directory.exists()) directory.mkdirs();
-
-    for (MultipartFile file : files) {
-      String originalName = file.getOriginalFilename();
-      if (originalName == null) continue;
-
-      String fileNameOnly = originalName.replaceAll("[^0-9]", "");
-      String saveName;
-      if (!fileNameOnly.isEmpty()) {
-        int fileNumber = Integer.parseInt(fileNameOnly);
-        saveName = String.format("%02d.jpg", fileNumber);
-      } else {
-        saveName = originalName;
-      }
-
-      file.transferTo(new File(uploadPath + File.separator + saveName));
+    @GetMapping("/list")
+    public ResponseEntity<?> getMyFonts(
+        @CookieValue(name = "accessToken", required = false) String token
+    ) {
+        if (token == null) {
+            return ResponseEntity.status(401).body("로그인이 필요합니다.");
+        }
+        try {
+            List<FontListResponse> fonts = fontService.getMyFonts(token)
+                .stream().map(FontListResponse::new).toList();
+            return ResponseEntity.ok(fonts);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(401).body(e.getMessage());
+        }
     }
-  }
-  
-  private boolean runPythonEngine(String scriptPath, String inputDir, String outputTtfPath) {
-    try {
-      ProcessBuilder pb = new ProcessBuilder("python3", "-u", scriptPath, inputDir, outputTtfPath);
-      pb.redirectErrorStream(true);
-      Process process = pb.start();
 
-      BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-      String line;
-      while ((line = reader.readLine()) != null) {
-        System.out.println("[Python Log] " + line);
-      }
-
-      int exitCode = process.waitFor();
-      return exitCode == 0;
-    } catch (Exception e) {
-      e.printStackTrace();
-      return false;
+    @GetMapping("/download/{fontId}")
+    public ResponseEntity<Resource> downloadFont(
+        @PathVariable String fontId,
+        @CookieValue(name = "accessToken", required = false) String token
+    ) {
+        if (token == null) {
+            return ResponseEntity.status(401).build();
+        }
+        try {
+            File ttfFile = fontService.downloadFont(token, fontId);
+            Resource resource = new UrlResource(ttfFile.toURI());
+            String fileName = ttfFile.getName();
+            return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
+                .body(resource);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404).build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        }
     }
-  }
 }
