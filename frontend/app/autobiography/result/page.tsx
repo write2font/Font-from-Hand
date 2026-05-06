@@ -1,8 +1,54 @@
 "use client";
 
-import React from "react";
-import { Check, Download, BookOpen, ArrowLeft } from "lucide-react";
+import React, { useState } from "react";
+import { Check, Download, ArrowLeft, Star } from "lucide-react";
 import Link from "next/link";
+
+const SURVEY_QUESTIONS = [
+  "내 이야기가 정확하게 담겼나요?",
+  "글이 자연스럽게 읽히나요?",
+  "AI가 내 감정과 경험을 잘 표현했나요?",
+];
+
+function SurveyForm() {
+  const [ratings, setRatings] = useState<number[]>(Array(SURVEY_QUESTIONS.length).fill(0));
+  const [submitted, setSubmitted] = useState(false);
+
+  if (submitted) return (
+    <div className="text-center py-8 text-emerald-600 font-medium">
+      소중한 의견 감사합니다!
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      {SURVEY_QUESTIONS.map((q, qi) => (
+        <div key={qi}>
+          <p className="text-sm text-gray-700 mb-2">{q}</p>
+          <div className="flex gap-1">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button key={star} onClick={() => {
+                setRatings((prev) => { const next = [...prev]; next[qi] = star; return next; });
+              }}>
+                <Star
+                  size={24}
+                  className={star <= ratings[qi] ? "text-yellow-400 fill-yellow-400" : "text-gray-200"}
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+      <button
+        onClick={() => setSubmitted(true)}
+        disabled={ratings.some((r) => r === 0)}
+        className="mt-2 px-6 py-3 bg-purple-500 text-white text-sm font-bold rounded-2xl hover:bg-purple-600 disabled:bg-gray-100 disabled:text-gray-400 transition"
+      >
+        제출하기
+      </button>
+    </div>
+  );
+}
 
 export default function AutobiographyResultPage() {
   const handleDownload = () => {
@@ -65,6 +111,12 @@ export default function AutobiographyResultPage() {
             <Download size={20} />
             <span>자서전 PDF 다운로드</span>
           </button>
+        </div>
+
+        {/* 사용자 평가 */}
+        <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-gray-100 mb-8">
+          <h3 className="text-lg font-bold mb-6">자서전 평가</h3>
+          <SurveyForm />
         </div>
 
         {/* 다시 만들기 */}
