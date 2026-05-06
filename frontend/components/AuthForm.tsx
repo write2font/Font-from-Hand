@@ -24,7 +24,7 @@ export default function AuthForm({ type, onSubmit, children }: AuthFormProps) {
           {children}
           <button
             type="submit"
-            className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all active:scale-95"
+            className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all active:scale-95"
           >
             {isSignIn ? "로그인" : "가입하기"}
           </button>
@@ -34,7 +34,7 @@ export default function AuthForm({ type, onSubmit, children }: AuthFormProps) {
           {isSignIn ? "아직 회원이 아니신가요? " : "이미 계정이 있으신가요? "}
           <Link
             href={isSignIn ? "/sign-up" : "/sign-in"}
-            className="text-purple-600 font-bold hover:underline"
+            className="text-brand-600 font-bold hover:underline"
           >
             {isSignIn ? "회원가입" : "로그인"}
           </Link>
