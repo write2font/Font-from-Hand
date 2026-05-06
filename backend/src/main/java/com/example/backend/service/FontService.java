@@ -24,7 +24,7 @@ public class FontService {
     private final JwtProvider jwtProvider;
 
     @Transactional
-    public String uploadFont(List<MultipartFile> files, String token) throws Exception {
+    public String uploadFont(List<MultipartFile> files, String token, String fontName, Font.FontType type) throws Exception {
         User user = getUserFromToken(token);
 
         String fontId = UUID.randomUUID().toString();
@@ -34,24 +34,30 @@ public class FontService {
         saveFiles(files, uploadPath);
 
         String pythonScriptPath = Paths.get(baseDir, "..", "font-engine", "main.py").normalize().toString();
-        String outputTtfPath = Paths.get(uploadPath, "MyHandwriting.ttf").toString();
+        String outputTtfPath = Paths.get(uploadPath, fontName + ".ttf").toString();
 
         boolean success = runPythonEngine(pythonScriptPath, uploadPath, outputTtfPath);
         if (!success) {
             throw new RuntimeException("파이썬 폰트 생성 중 에러 발생");
         }
 
-        fontRepository.save(new Font(user, "MyHandwriting", fontId, outputTtfPath));
+        fontRepository.save(new Font(user, fontName, fontId, outputTtfPath, type));
         return fontId;
     }
 
     @Transactional(readOnly = true)
-    public File downloadFont(String token) {
+    public List<Font> getMyFonts(String token) {
+        User user = getUserFromToken(token);
+        return fontRepository.findByUserOrderByCreatedAtDesc(user);
+    }
+
+    @Transactional(readOnly = true)
+    public File downloadFont(String token, String fontId) {
         User user = getUserFromToken(token);
 
-        Font font = fontRepository.findByUserOrderByCreatedAtDesc(user)
-            .stream().findFirst()
-            .orElseThrow(() -> new RuntimeException("생성된 폰트가 없습니다."));
+        Font font = fontRepository.findByFontId(fontId)
+            .filter(f -> f.getUser().getId().equals(user.getId()))
+            .orElseThrow(() -> new RuntimeException("폰트를 찾을 수 없습니다."));
 
         File ttfFile = new File(font.getTtfPath());
         if (!ttfFile.exists()) {

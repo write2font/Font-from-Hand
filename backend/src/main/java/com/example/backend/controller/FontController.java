@@ -1,5 +1,7 @@
 package com.example.backend.controller;
 
+import com.example.backend.dto.FontListResponse;
+import com.example.backend.entity.Font;
 import com.example.backend.service.FontService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
@@ -25,6 +27,8 @@ public class FontController {
     @PostMapping("/upload")
     public ResponseEntity<?> uploadImages(
         @RequestParam("files") List<MultipartFile> files,
+        @RequestParam("fontName") String fontName,
+        @RequestParam(value = "type", defaultValue = "MANUAL") Font.FontType type,
         @CookieValue(name = "accessToken", required = false) String token
     ) {
         if (token == null) {
@@ -34,8 +38,8 @@ public class FontController {
             return ResponseEntity.badRequest().body("업로드할 이미지가 없습니다.");
         }
         try {
-            String fontId = fontService.uploadFont(files, token);
-            return ResponseEntity.ok(Map.of("fontId", fontId, "message", "폰트 생성 완료"));
+            String fontId = fontService.uploadFont(files, token, fontName, type);
+            return ResponseEntity.ok(Map.of("fontId", fontId, "fontName", fontName, "message", "폰트 생성 완료"));
         } catch (RuntimeException e) {
             return ResponseEntity.status(401).body(e.getMessage());
         } catch (Exception e) {
@@ -44,19 +48,37 @@ public class FontController {
         }
     }
 
-    @GetMapping("/download")
+    @GetMapping("/list")
+    public ResponseEntity<?> getMyFonts(
+        @CookieValue(name = "accessToken", required = false) String token
+    ) {
+        if (token == null) {
+            return ResponseEntity.status(401).body("로그인이 필요합니다.");
+        }
+        try {
+            List<FontListResponse> fonts = fontService.getMyFonts(token)
+                .stream().map(FontListResponse::new).toList();
+            return ResponseEntity.ok(fonts);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(401).body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/download/{fontId}")
     public ResponseEntity<Resource> downloadFont(
+        @PathVariable String fontId,
         @CookieValue(name = "accessToken", required = false) String token
     ) {
         if (token == null) {
             return ResponseEntity.status(401).build();
         }
         try {
-            File ttfFile = fontService.downloadFont(token);
+            File ttfFile = fontService.downloadFont(token, fontId);
             Resource resource = new UrlResource(ttfFile.toURI());
+            String fileName = ttfFile.getName();
             return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"MyHandwriting.ttf\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
                 .body(resource);
         } catch (RuntimeException e) {
             return ResponseEntity.status(404).build();
