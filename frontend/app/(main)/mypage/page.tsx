@@ -192,7 +192,7 @@ export default function MyPage() {
           {fonts.length === 0 ? (
             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-16 text-center">
               <p className="text-gray-400 mb-6">아직 만든 폰트가 없어요.</p>
-              <Button onClick={() => router.push("/scan")}>폰트 만들러 가기</Button>
+              <Button onClick={() => router.push("/")}>폰트 만들러 가기</Button>
             </div>
           ) : (
             <div className="flex flex-col gap-4">
