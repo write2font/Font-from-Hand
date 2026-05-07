@@ -37,7 +37,7 @@ export default function Header() {
 
   return (
     <header className="flex justify-between items-center px-12 py-6 bg-white border-b border-gray-100 w-full">
-      <Link href="/" className="text-2xl font-bold tracking-tight text-purple-600">
+      <Link href="/" className="text-2xl font-bold tracking-tight text-brand-600">
         FFH
       </Link>
 
@@ -48,9 +48,9 @@ export default function Header() {
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setDropdownOpen((prev) => !prev)}
-              className="flex items-center gap-1 text-sm font-semibold text-gray-700 hover:text-purple-600 transition"
+              className="flex items-center gap-1 text-sm font-semibold text-gray-700 hover:text-brand-600 transition"
             >
-              <span className="text-purple-600">{user.name}</span>님
+              <span className="text-brand-600">{user.name}</span>님
               <ChevronDown size={14} className={`transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
             </button>
 
@@ -59,7 +59,7 @@ export default function Header() {
                 <Link
                   href="/mypage"
                   onClick={() => setDropdownOpen(false)}
-                  className="block px-4 py-3 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-600 transition"
+                  className="block px-4 py-3 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-600 transition"
                 >
                   마이페이지
                 </Link>
@@ -78,7 +78,7 @@ export default function Header() {
           </div>
         ) : (
           <Link href="/sign-in">
-            <button className="px-5 py-2 text-sm font-medium text-white bg-purple-600 rounded-full hover:bg-purple-700 transition shadow-sm active:scale-95">
+            <button className="px-5 py-2 text-sm font-medium text-white bg-brand-600 rounded-full hover:bg-brand-700 transition shadow-sm active:scale-95">
               로그인
             </button>
           </Link>

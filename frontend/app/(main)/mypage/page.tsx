@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Download, FileText } from "lucide-react";
 import api from "@/app/lib/axios";
+import PageHeader from "@/components/ui/PageHeader";
+import Button from "@/components/ui/Button";
 
 interface Font {
   fontId: string;
@@ -54,12 +56,11 @@ export default function MyPage() {
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       <main className="max-w-4xl mx-auto px-6 pt-16">
-        <h1 className="text-3xl font-bold mb-2">마이페이지</h1>
-        <p className="text-gray-500 mb-12">내가 만든 폰트를 확인하고 다운로드하세요.</p>
+        <PageHeader title="마이페이지" subtitle="내가 만든 폰트를 확인하고 다운로드하세요." />
 
         <section>
           <h2 className="text-lg font-bold mb-6 flex items-center gap-2">
-            <FileText size={20} className="text-purple-500" />
+            <FileText size={20} className="text-brand-500" />
             내 폰트 목록
           </h2>
 
@@ -68,12 +69,9 @@ export default function MyPage() {
           ) : fonts.length === 0 ? (
             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-16 text-center">
               <p className="text-gray-400 mb-6">아직 만든 폰트가 없어요.</p>
-              <button
-                onClick={() => router.push("/scan")}
-                className="px-6 py-3 bg-purple-600 text-white font-bold rounded-2xl hover:bg-purple-700 transition"
-              >
+              <Button onClick={() => router.push("/scan")}>
                 폰트 만들러 가기
-              </button>
+              </Button>
             </div>
           ) : (
             <div className="flex flex-col gap-4">
@@ -89,13 +87,13 @@ export default function MyPage() {
                       {new Date(font.createdAt).toLocaleDateString("ko-KR")}
                     </p>
                   </div>
-                  <button
+                  <Button
                     onClick={() => handleDownload(font.fontId, font.fontName)}
-                    className="flex items-center gap-2 px-5 py-3 bg-purple-600 text-white font-bold rounded-2xl hover:bg-purple-700 transition text-sm"
+                    className="flex items-center gap-2"
                   >
                     <Download size={16} />
                     TTF 다운로드
-                  </button>
+                  </Button>
                 </div>
               ))}
             </div>
