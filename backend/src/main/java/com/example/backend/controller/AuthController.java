@@ -2,6 +2,7 @@ package com.example.backend.controller;
 
 import com.example.backend.dto.SignInRequest;
 import com.example.backend.dto.SignUpRequest;
+import com.example.backend.dto.UpdateNameRequest;
 import com.example.backend.dto.UserResponse;
 import com.example.backend.security.JwtProvider;
 import com.example.backend.service.AuthService;
@@ -64,10 +65,42 @@ public class AuthController {
     if (token == null || !jwtProvider.validateToken(token)) {
       return ResponseEntity.status(401).build();
     }
-
     String email = jwtProvider.getEmailFromToken(token);
+    return ResponseEntity.ok(authService.getMyInfo(email));
+  }
 
-    UserResponse response = authService.getMyInfo(email);
-    return ResponseEntity.ok(response);
+  @PatchMapping("/me")
+  public ResponseEntity<UserResponse> updateMe(
+    @CookieValue(name = "accessToken", required = false) String token,
+    @RequestBody UpdateNameRequest request
+  ) {
+    if (token == null || !jwtProvider.validateToken(token)) {
+      return ResponseEntity.status(401).build();
+    }
+    String email = jwtProvider.getEmailFromToken(token);
+    return ResponseEntity.ok(authService.updateName(email, request));
+  }
+
+  @DeleteMapping("/me")
+  public ResponseEntity<String> deleteMe(
+    @CookieValue(name = "accessToken", required = false) String token
+  ) {
+    if (token == null || !jwtProvider.validateToken(token)) {
+      return ResponseEntity.status(401).build();
+    }
+    String email = jwtProvider.getEmailFromToken(token);
+    authService.deleteAccount(email);
+
+    ResponseCookie expiredCookie = ResponseCookie.from("accessToken", "")
+      .httpOnly(true)
+      .secure(false)
+      .path("/")
+      .maxAge(0)
+      .sameSite("Lax")
+      .build();
+
+    return ResponseEntity.ok()
+      .header(HttpHeaders.SET_COOKIE, expiredCookie.toString())
+      .body("회원탈퇴가 완료되었습니다.");
   }
 }

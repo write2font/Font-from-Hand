@@ -46,6 +46,15 @@ export const authService = {
     const response = await api.get("/auth/me");
     return response.data;
   },
+
+  updateName: async (name: string) => {
+    const response = await api.patch("/auth/me", { name });
+    return response.data;
+  },
+
+  deleteAccount: async () => {
+    await api.delete("/auth/me");
+  },
 };
 
 export default api;
