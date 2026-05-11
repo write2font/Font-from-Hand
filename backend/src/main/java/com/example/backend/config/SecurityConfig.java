@@ -29,6 +29,7 @@ public class SecurityConfig {
       .authorizeHttpRequests(auth -> auth
         .requestMatchers("/api/v1/auth/**").permitAll()
         .requestMatchers("/api/v1/autobiography/**").permitAll()
+        .requestMatchers("/api/v1/fonts/**").permitAll()
         .anyRequest().authenticated()
       );
 

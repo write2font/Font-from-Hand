@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Button from "@/components/ui/Button";
 
 interface AuthFormProps {
   type: "sign-in" | "sign-up";
@@ -22,19 +23,16 @@ export default function AuthForm({ type, onSubmit, children }: AuthFormProps) {
 
         <form onSubmit={onSubmit} className="space-y-5">
           {children}
-          <button
-            type="submit"
-            className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all active:scale-95"
-          >
+          <Button type="submit" size="md" className="w-full">
             {isSignIn ? "로그인" : "가입하기"}
-          </button>
+          </Button>
         </form>
 
         <div className="text-center text-sm text-gray-600">
           {isSignIn ? "아직 회원이 아니신가요? " : "이미 계정이 있으신가요? "}
           <Link
             href={isSignIn ? "/sign-up" : "/sign-in"}
-            className="text-purple-600 font-bold hover:underline"
+            className="text-brand-600 font-bold hover:underline"
           >
             {isSignIn ? "회원가입" : "로그인"}
           </Link>

@@ -404,7 +404,7 @@ export default function AutobiographyPage() {
           onChange={(e) => { if (e.target.files) setImages((p) => [...p, ...Array.from(e.target.files!)]); }} />
         {images.length === 0 ? (
           <button onClick={() => imageInputRef.current?.click()}
-            className="w-full h-44 flex flex-col items-center justify-center gap-2 text-gray-400 hover:text-purple-400 transition">
+            className="w-full h-44 flex flex-col items-center justify-center gap-2 text-gray-400 hover:text-brand-400 transition">
             <Upload size={32} />
             <span className="text-sm">클릭하여 이미지 추가</span>
           </button>
@@ -418,7 +418,7 @@ export default function AutobiographyPage() {
                 </button>
               </div>
             ))}
-            <button onClick={() => imageInputRef.current?.click()} className="text-xs text-purple-400 mt-2">+ 더 추가</button>
+            <button onClick={() => imageInputRef.current?.click()} className="text-xs text-brand-400 mt-2">+ 더 추가</button>
           </div>
         )}
       </FieldCard>
@@ -444,14 +444,14 @@ export default function AutobiographyPage() {
           <div className="flex gap-1">
             {QUESTIONS.map((_, i) => (
               <button key={i} onClick={() => setCurrentQIdx(i)}
-                className={`w-2 h-2 rounded-full transition ${i === currentQIdx ? "bg-purple-400" : recordings[i].status === "done" ? "bg-purple-200" : "bg-gray-200"}`} />
+                className={`w-2 h-2 rounded-full transition ${i === currentQIdx ? "bg-brand-400" : recordings[i].status === "done" ? "bg-brand-200" : "bg-gray-200"}`} />
             ))}
           </div>
         </div>
 
         {/* 질문 카드 */}
         <div className="bg-gray-100 rounded-2xl p-8 mb-6">
-          <p className="text-xs font-bold text-purple-400 uppercase tracking-widest mb-3">{q.category}</p>
+          <p className="text-xs font-bold text-brand-400 uppercase tracking-widest mb-3">{q.category}</p>
           <p className="text-xl font-bold text-gray-800 leading-relaxed">{q.text}</p>
         </div>
 
@@ -488,7 +488,7 @@ export default function AutobiographyPage() {
     if (loadingFollowup) return (
       <PageShell>
         <div className="flex flex-col items-center py-24 gap-4 text-gray-400">
-          <div className="w-8 h-8 border-2 border-purple-300 border-t-purple-500 rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-brand-300 border-t-brand-500 rounded-full animate-spin" />
           <span className="text-sm">부족한 답변을 분석하고 있어요...</span>
         </div>
       </PageShell>
@@ -507,13 +507,13 @@ export default function AutobiographyPage() {
           <div className="flex gap-1">
             {followupQuestions.map((_, i) => (
               <button key={i} onClick={() => setCurrentFIdx(i)}
-                className={`w-2 h-2 rounded-full transition ${i === currentFIdx ? "bg-purple-400" : followupRecordings[i]?.status === "done" ? "bg-purple-200" : "bg-gray-200"}`} />
+                className={`w-2 h-2 rounded-full transition ${i === currentFIdx ? "bg-brand-400" : followupRecordings[i]?.status === "done" ? "bg-brand-200" : "bg-gray-200"}`} />
             ))}
           </div>
         </div>
 
         <div className="bg-gray-100 rounded-2xl p-8 mb-6">
-          <p className="text-xs font-bold text-purple-400 uppercase tracking-widest mb-3">추가 질문</p>
+          <p className="text-xs font-bold text-brand-400 uppercase tracking-widest mb-3">추가 질문</p>
           <p className="text-xl font-bold text-gray-800 leading-relaxed">{fq}</p>
         </div>
 
@@ -551,7 +551,7 @@ export default function AutobiographyPage() {
       <h1 className="text-2xl font-bold mb-8">키워드 선택</h1>
       {loadingKeywords ? (
         <div className="flex flex-col items-center py-24 gap-4 text-gray-400">
-          <div className="w-8 h-8 border-2 border-purple-300 border-t-purple-500 rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-brand-300 border-t-brand-500 rounded-full animate-spin" />
           <span className="text-sm">키워드를 추출하고 있어요...</span>
         </div>
       ) : (
@@ -562,7 +562,7 @@ export default function AutobiographyPage() {
               {keywords.map((kw) => (
                 <button key={kw} onClick={() => toggleKeyword(kw)}
                   className={`py-4 rounded-xl text-sm font-medium transition ${
-                    selectedKeywords.has(kw) ? "bg-purple-400 text-white" : "bg-purple-200 text-gray-700 hover:bg-purple-300"
+                    selectedKeywords.has(kw) ? "bg-brand-400 text-white" : "bg-brand-200 text-gray-700 hover:bg-brand-300"
                   }`}>
                   {kw}
                 </button>
@@ -575,7 +575,7 @@ export default function AutobiographyPage() {
               <button
                 onClick={regenerateTitle}
                 disabled={selectedKeywords.size === 0 || regeneratingTitle}
-                className="text-xs text-purple-400 hover:text-purple-600 disabled:text-gray-300 transition"
+                className="text-xs text-brand-400 hover:text-brand-600 disabled:text-gray-300 transition"
               >
                 {regeneratingTitle ? "생성 중..." : "키워드로 재생성"}
               </button>
@@ -605,12 +605,12 @@ export default function AutobiographyPage() {
     const steps = ["인터뷰 분석 중", "챕터 구성 중", "본문 작성 중", "표지 생성 중", "PDF 완성 중"];
     const stepIdx = Math.min(Math.floor(progress / 20), steps.length - 1);
     return (
-      <div className="min-h-screen bg-gradient-to-b from-purple-50 to-white flex flex-col items-center justify-center px-6">
+      <div className="min-h-screen bg-gradient-to-b from-brand-50 to-white flex flex-col items-center justify-center px-6">
         <div className="w-full max-w-md text-center">
           {/* 아이콘 */}
           <div className="relative w-24 h-24 mx-auto mb-10">
-            <div className="absolute inset-0 rounded-full bg-purple-100 animate-ping opacity-40" />
-            <div className="relative w-24 h-24 rounded-full bg-purple-500 flex items-center justify-center shadow-lg shadow-purple-200">
+            <div className="absolute inset-0 rounded-full bg-brand-100 animate-ping opacity-40" />
+            <div className="relative w-24 h-24 rounded-full bg-brand-500 flex items-center justify-center shadow-lg shadow-brand-200">
               <BookOpen size={36} className="text-white" />
             </div>
           </div>
@@ -620,7 +620,7 @@ export default function AutobiographyPage() {
 
           {/* 진행바 */}
           <div className="relative w-full h-3 bg-gray-100 rounded-full overflow-hidden mb-3">
-            <div className="absolute left-0 top-0 h-full bg-gradient-to-r from-purple-400 to-purple-600 rounded-full transition-all duration-500"
+            <div className="absolute left-0 top-0 h-full bg-gradient-to-r from-brand-400 to-brand-600 rounded-full transition-all duration-500"
               style={{ width: `${progress}%` }} />
           </div>
           <div className="flex justify-between text-xs text-gray-400 mb-8">
@@ -632,7 +632,7 @@ export default function AutobiographyPage() {
           <div className="flex justify-center gap-2 mb-10">
             {steps.map((s, i) => (
               <div key={s} className={`flex flex-col items-center gap-1.5 ${i <= stepIdx ? "opacity-100" : "opacity-30"}`}>
-                <div className={`w-2 h-2 rounded-full transition-all ${i < stepIdx ? "bg-purple-500" : i === stepIdx ? "bg-purple-400 scale-125" : "bg-gray-300"}`} />
+                <div className={`w-2 h-2 rounded-full transition-all ${i < stepIdx ? "bg-brand-500" : i === stepIdx ? "bg-brand-400 scale-125" : "bg-gray-300"}`} />
               </div>
             ))}
           </div>
@@ -687,7 +687,7 @@ function RecordingArea({
         {recording.status === "idle" && !active && (
           <div className="flex justify-center gap-3">
             <button onClick={onStart}
-              className="px-6 py-3 bg-purple-300 text-white font-bold rounded-xl hover:bg-purple-400 transition flex items-center gap-2">
+              className="px-6 py-3 bg-brand-300 text-white font-bold rounded-xl hover:bg-brand-400 transition flex items-center gap-2">
               <Mic size={16} />
               녹음 시작
             </button>
@@ -716,7 +716,7 @@ function RecordingArea({
         {recording.status === "done" && recording.url && !active && (
           <div className="flex items-center gap-3">
             <button onClick={onTogglePlay}
-              className="w-10 h-10 flex items-center justify-center bg-purple-300 text-white rounded-full hover:bg-purple-400 transition shrink-0">
+              className="w-10 h-10 flex items-center justify-center bg-brand-300 text-white rounded-full hover:bg-brand-400 transition shrink-0">
               {isPlaying ? <Pause size={16} /> : <Play size={16} />}
             </button>
             <audio ref={audioRef} src={recording.url} />
@@ -737,7 +737,7 @@ function RecordingArea({
         </p>
         {transcribing ? (
           <div className="flex items-center gap-2 text-gray-400 text-sm">
-            <div className="w-4 h-4 border-2 border-purple-300 border-t-purple-500 rounded-full animate-spin" />
+            <div className="w-4 h-4 border-2 border-brand-300 border-t-brand-500 rounded-full animate-spin" />
             변환 중...
           </div>
         ) : (
@@ -768,7 +768,7 @@ function IntroStep({ onNext }: { onNext: () => void }) {
       <div className="max-w-3xl mx-auto px-6 pt-16 pb-20">
         {/* 히어로 */}
         <div className="bg-gray-100 rounded-3xl p-10 mb-8">
-          <p className="text-xs font-bold text-purple-400 uppercase tracking-widest mb-4">AI 자서전 시스템</p>
+          <p className="text-xs font-bold text-brand-400 uppercase tracking-widest mb-4">AI 자서전 시스템</p>
           <h2 className="text-3xl font-bold text-gray-900 leading-tight mb-4">
             당신의 이야기를<br />세상에 남겨보세요
           </h2>
@@ -782,7 +782,7 @@ function IntroStep({ onNext }: { onNext: () => void }) {
         <div className="space-y-3 mb-10">
           {steps.map((s, i) => (
             <div key={i} className="flex items-center gap-4 bg-gray-50 rounded-2xl px-6 py-4">
-              <div className="w-10 h-10 bg-purple-200 text-purple-600 rounded-xl flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 bg-brand-200 text-brand-600 rounded-xl flex items-center justify-center shrink-0">
                 {s.icon}
               </div>
               <div className="flex-1">
@@ -797,7 +797,7 @@ function IntroStep({ onNext }: { onNext: () => void }) {
         </div>
 
         <button onClick={onNext}
-          className="w-full py-5 bg-purple-400 text-white font-bold rounded-2xl hover:bg-purple-500 transition text-lg">
+          className="w-full py-5 bg-brand-400 text-white font-bold rounded-2xl hover:bg-brand-500 transition text-lg">
           시작하기
         </button>
       </div>
@@ -831,7 +831,7 @@ function PrimaryButton({
       className={`py-4 rounded-2xl font-bold text-base transition ${className} ${
         disabled
           ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-          : "bg-purple-500 text-white hover:bg-purple-600 shadow-sm shadow-purple-100"
+          : "bg-brand-500 text-white hover:bg-brand-600 shadow-sm shadow-brand-100"
       }`}>
       {children}
     </button>
@@ -867,8 +867,8 @@ function StepIndicator({ step }: { step: Step }) {
         <React.Fragment key={i}>
           <div className="flex flex-col items-center gap-2">
             <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-colors ${
-              i < current  ? "bg-purple-500 text-white" :
-              i === current ? "bg-purple-500 text-white" :
+              i < current  ? "bg-brand-500 text-white" :
+              i === current ? "bg-brand-500 text-white" :
               "bg-gray-100 text-gray-400"
             }`}>
               {i < current ? <Check size={18} /> : i + 1}
@@ -878,7 +878,7 @@ function StepIndicator({ step }: { step: Step }) {
             </span>
           </div>
           {i < MACRO_STEPS.length - 1 && (
-            <div className={`flex-1 h-[1px] mx-3 mb-5 transition-colors ${i < current ? "bg-purple-500" : "bg-gray-200"}`} />
+            <div className={`flex-1 h-[1px] mx-3 mb-5 transition-colors ${i < current ? "bg-brand-500" : "bg-gray-200"}`} />
           )}
         </React.Fragment>
       ))}
