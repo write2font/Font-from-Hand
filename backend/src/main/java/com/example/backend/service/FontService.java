@@ -53,6 +53,26 @@ public class FontService {
         return fontRepository.findByUserOrderByCreatedAtDesc(user);
     }
 
+    @Transactional
+    public void deleteFont(String token, String fontId) {
+        User user = getUserFromToken(token);
+
+        Font font = fontRepository.findByFontId(fontId)
+            .filter(f -> f.getUser().getId().equals(user.getId()))
+            .orElseThrow(() -> new RuntimeException("폰트를 찾을 수 없습니다."));
+
+        File dir = new File(font.getTtfPath()).getParentFile();
+        if (dir != null && dir.exists()) {
+            File[] files = dir.listFiles();
+            if (files != null) {
+                for (File f : files) f.delete();
+            }
+            dir.delete();
+        }
+
+        fontRepository.delete(font);
+    }
+
     @Transactional(readOnly = true)
     public File downloadFont(String token, String fontId) {
         User user = getUserFromToken(token);

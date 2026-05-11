@@ -64,6 +64,22 @@ public class FontController {
         }
     }
 
+    @DeleteMapping("/{fontId}")
+    public ResponseEntity<?> deleteFont(
+        @PathVariable String fontId,
+        @CookieValue(name = "accessToken", required = false) String token
+    ) {
+        if (token == null) {
+            return ResponseEntity.status(401).body("로그인이 필요합니다.");
+        }
+        try {
+            fontService.deleteFont(token, fontId);
+            return ResponseEntity.ok("폰트가 삭제되었습니다.");
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404).body(e.getMessage());
+        }
+    }
+
     @GetMapping("/download/{fontId}")
     public ResponseEntity<Resource> downloadFont(
         @PathVariable String fontId,

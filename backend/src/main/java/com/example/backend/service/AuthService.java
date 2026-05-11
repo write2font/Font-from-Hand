@@ -2,8 +2,10 @@ package com.example.backend.service;
 
 import com.example.backend.dto.SignInRequest;
 import com.example.backend.dto.SignUpRequest;
+import com.example.backend.dto.UpdateNameRequest;
 import com.example.backend.dto.UserResponse;
 import com.example.backend.entity.User;
+import com.example.backend.repository.FontRepository;
 import com.example.backend.repository.UserRepository;
 import com.example.backend.security.JwtProvider;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
 
   private final UserRepository userRepository;
+  private final FontRepository fontRepository;
   private final BCryptPasswordEncoder passwordEncoder;
   private final JwtProvider jwtProvider;
 
@@ -48,5 +51,23 @@ public class AuthService {
       .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
 
     return new UserResponse(user.getEmail(), user.getName());
+  }
+
+  @Transactional
+  public UserResponse updateName(String email, UpdateNameRequest request) {
+    User user = userRepository.findByEmail(email)
+      .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
+
+    user.updateName(request.getName());
+    return new UserResponse(user.getEmail(), user.getName());
+  }
+
+  @Transactional
+  public void deleteAccount(String email) {
+    User user = userRepository.findByEmail(email)
+      .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
+
+    fontRepository.deleteAll(fontRepository.findByUserOrderByCreatedAtDesc(user));
+    userRepository.delete(user);
   }
 }
