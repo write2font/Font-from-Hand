@@ -58,6 +58,10 @@ export default function DrawPage() {
   };
 
   const handlePrev = async () => {
+    if (currentIndex === 0) {
+      setStep("name");
+      return;
+    }
     await saveCurrentCanvas();
     const prev = currentIndex - 1;
     setCurrentIndex(prev);
@@ -168,7 +172,7 @@ export default function DrawPage() {
             <StepItem number={3} label="결과" />
           </div>
 
-          <div className="bg-white p-10 rounded-3xl shadow-sm border border-gray-100 max-w-lg">
+          <div className="bg-white p-10 rounded-3xl shadow-sm border border-gray-100">
             <label className="block text-sm font-bold text-gray-700 mb-2">
               폰트 이름 <span className="text-red-400">*</span>
             </label>
