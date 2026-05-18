@@ -31,16 +31,11 @@ export default function ScanPage() {
     let interval: NodeJS.Timeout;
     if (isProcessing) {
       interval = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 95) return 95;
-          return prev + 1;
-        });
+        setProgress((prev) => (prev >= 95 ? 95 : prev + 1));
       }, 1500);
     }
     return () => clearInterval(interval);
   }, [isProcessing]);
-
-  const onUploadClick = () => fileInputRef.current?.click();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -147,7 +142,7 @@ export default function ScanPage() {
               title="웹에서 직접 그리기"
               description="브라우저에서 마우스나 태블릿으로 직접 작성합니다."
               isSelected={selectedMethod === "draw"}
-              onClick={() => setSelectedMethod("draw")}
+              onClick={() => router.push("/scan/draw")}
             />
           </div>
         </div>
@@ -195,7 +190,7 @@ export default function ScanPage() {
                 accept="image/*"
               />
               <div
-                onClick={onUploadClick}
+                onClick={() => fileInputRef.current?.click()}
                 className="border-2 border-dashed border-gray-200 rounded-3xl py-20 flex flex-col items-center justify-center cursor-pointer hover:border-brand-300 hover:bg-brand-50 transition group"
               >
                 <UploadCloud size={48} className="text-gray-300 mb-4 group-hover:text-brand-400" />
@@ -210,16 +205,11 @@ export default function ScanPage() {
                 <input
                   type="text"
                   value={fontName}
-                  onChange={(e) => {
-                    setFontName(e.target.value);
-                    if (e.target.value.trim()) setFontNameError(false);
-                  }}
+                  onChange={(e) => { setFontName(e.target.value); if (e.target.value.trim()) setFontNameError(false); }}
                   onBlur={() => { if (!fontName.trim()) setFontNameError(true); }}
                   placeholder="예: 할머니체, 내손글씨"
                   className={`w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 text-gray-800 transition ${
-                    fontNameError
-                      ? "border-red-400 focus:ring-red-300"
-                      : "border-gray-200 focus:ring-brand-400"
+                    fontNameError ? "border-red-400 focus:ring-red-300" : "border-gray-200 focus:ring-brand-400"
                   }`}
                 />
                 {fontNameError && (

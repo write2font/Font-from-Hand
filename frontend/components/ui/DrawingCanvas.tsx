@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, forwardRef, useImperativeHandle } from "react";
-import { ReactSketchCanvas, ReactSketchCanvasRef } from "react-sketch-canvas";
+import { ReactSketchCanvas, ReactSketchCanvasRef, CanvasPath } from "react-sketch-canvas";
 import { Undo2, Trash2 } from "lucide-react";
 
 interface DrawingCanvasProps {
@@ -10,6 +10,8 @@ interface DrawingCanvasProps {
 
 export interface DrawingCanvasHandle {
   exportImage: () => Promise<string>;
+  exportPaths: () => Promise<CanvasPath[]>;
+  loadPaths: (paths: CanvasPath[]) => void;
   clearCanvas: () => void;
 }
 
@@ -22,12 +24,18 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
         const data = await canvasRef.current?.exportImage("png");
         return data ?? "";
       },
+      exportPaths: async () => {
+        const paths = await canvasRef.current?.exportPaths();
+        return paths ?? [];
+      },
+      loadPaths: (paths: CanvasPath[]) => {
+        canvasRef.current?.loadPaths(paths);
+      },
       clearCanvas: () => canvasRef.current?.clearCanvas(),
     }));
 
     return (
       <div className="flex flex-col gap-4">
-        {/* 툴바 */}
         <div className="flex items-center gap-3">
           <button
             onClick={() => canvasRef.current?.undo()}
@@ -45,7 +53,6 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
           </button>
         </div>
 
-        {/* 캔버스 */}
         <div className="border-2 border-gray-200 rounded-2xl overflow-hidden">
           <ReactSketchCanvas
             ref={canvasRef}
