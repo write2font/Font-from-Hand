@@ -263,11 +263,11 @@ export default function DrawPage() {
               다음
               <ChevronRight size={18} />
             </button>
-          ) : null}
-
-          <Button onClick={handleSubmit} className="flex-1">
-            폰트 생성하기
-          </Button>
+          ) : (
+            <Button onClick={handleSubmit} className="flex-1">
+              폰트 생성하기
+            </Button>
+          )}
         </div>
       </div>
     </div>
