@@ -201,7 +201,6 @@ export default function DrawPage() {
 
   // 글자 작성 화면
   const currentChar = DRAW_CHARACTERS[currentIndex];
-  const isFirst = currentIndex === 0;
   const isLast = currentIndex === TOTAL_CHARACTERS - 1;
 
   return (
@@ -249,8 +248,7 @@ export default function DrawPage() {
         <div className="max-w-3xl mx-auto flex items-center gap-3">
           <button
             onClick={handlePrev}
-            disabled={isFirst}
-            className="flex items-center gap-1.5 px-5 py-3 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-xl font-medium text-sm transition disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 px-5 py-3 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-xl font-medium text-sm transition"
           >
             <ChevronLeft size={18} />
             이전
