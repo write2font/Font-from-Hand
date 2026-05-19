@@ -223,23 +223,21 @@ export default function DrawPage() {
           </div>
         </div>
 
-        {/* 현재 글자 안내 */}
-        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 mb-6 flex items-center gap-8">
-          <div className="w-24 h-24 bg-brand-50 rounded-2xl flex items-center justify-center shrink-0">
-            <span className="text-5xl font-bold text-brand-600">{currentChar}</span>
-          </div>
-          <div>
-            <p className="text-sm text-gray-400 mb-1">이 글자를 아래 캔버스에 작성하세요</p>
-            <p className="text-lg font-bold text-gray-800">{currentChar}</p>
-            <p className="text-xs text-gray-400 mt-1">
-              U+{currentChar.codePointAt(0)?.toString(16).toUpperCase().padStart(4, "0")}
-            </p>
-          </div>
-        </div>
-
-        {/* 캔버스 */}
+        {/* 글자 안내 + 캔버스 */}
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 mb-6">
-          <DrawingCanvas ref={canvasRef} />
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-16 h-16 bg-brand-50 rounded-2xl flex items-center justify-center shrink-0">
+              <span className="text-4xl font-bold text-brand-600">{currentChar}</span>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400">이 글자를 아래 캔버스에 작성하세요</p>
+              <p className="text-base font-bold text-gray-800">{currentChar}</p>
+              <p className="text-xs text-gray-400">
+                U+{currentChar.codePointAt(0)?.toString(16).toUpperCase().padStart(4, "0")}
+              </p>
+            </div>
+          </div>
+          <DrawingCanvas ref={canvasRef} strokeWidth={4} canvasHeight="380px" />
         </div>
       </main>
 

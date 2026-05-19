@@ -6,6 +6,7 @@ import { Undo2, Trash2 } from "lucide-react";
 
 interface DrawingCanvasProps {
   strokeWidth?: number;
+  canvasHeight?: string;
 }
 
 export interface DrawingCanvasHandle {
@@ -16,7 +17,7 @@ export interface DrawingCanvasHandle {
 }
 
 const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
-  ({ strokeWidth = 4 }, ref) => {
+  ({ strokeWidth = 4, canvasHeight = "500px" }, ref) => {
     const canvasRef = useRef<ReactSketchCanvasRef>(null);
 
     useImperativeHandle(ref, () => ({
@@ -57,7 +58,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
           <ReactSketchCanvas
             ref={canvasRef}
             width="100%"
-            height="500px"
+            height={canvasHeight}
             strokeWidth={strokeWidth}
             strokeColor="#1a1a1a"
             canvasColor="#ffffff"
