@@ -92,6 +92,7 @@ export default function DrawPage() {
     }
     formData.append("fontName", fontName.trim());
     formData.append("type", "MANUAL");
+    formData.append("drawMode", "true");
 
     try {
       const response = await api.post("/fonts/upload", formData, {
