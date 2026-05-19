@@ -29,6 +29,7 @@ public class FontController {
         @RequestParam("files") List<MultipartFile> files,
         @RequestParam("fontName") String fontName,
         @RequestParam(value = "type", defaultValue = "MANUAL") Font.FontType type,
+        @RequestParam(value = "drawMode", defaultValue = "false") boolean drawMode,
         @CookieValue(name = "accessToken", required = false) String token
     ) {
         if (token == null) {
@@ -38,7 +39,7 @@ public class FontController {
             return ResponseEntity.badRequest().body("업로드할 이미지가 없습니다.");
         }
         try {
-            String fontId = fontService.uploadFont(files, token, fontName, type);
+            String fontId = fontService.uploadFont(files, token, fontName, type, drawMode);
             return ResponseEntity.ok(Map.of("fontId", fontId, "fontName", fontName, "message", "폰트 생성 완료"));
         } catch (RuntimeException e) {
             return ResponseEntity.status(401).body(e.getMessage());
