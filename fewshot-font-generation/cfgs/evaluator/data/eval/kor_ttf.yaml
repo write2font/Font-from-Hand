@@ -1,0 +1,8 @@
+dset:
+  test:
+    data_dir: /content/drive/MyDrive/font_project/my_handwriting/files_for_test
+    extension: png
+    gen_chars: /content/drive/MyDrive/font_project/my_handwriting/gen_chars.json
+    ref_chars: /content/drive/MyDrive/font_project/my_handwriting/ref_chars.json
+    source_ext: ttf
+    source_path: /content/drive/MyDrive/fewshot-font-generation/data/kor/NanumGiBbeumBarkEum.ttf

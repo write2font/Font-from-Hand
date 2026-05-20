@@ -1,0 +1,31 @@
+# custom.yaml (또는 ttf_finetune.yaml)
+
+dset:   
+  train:   
+    # 1. ttf 폴더가 아닌, Seoyeon 폴더를 감싸고 있는 '상위 폴더' 경로
+    data_dir: /content/drive/MyDrive/font_project/my_handwriting
+    
+    # 2. 학습할 글자(교집합이 확인된 33개 등)가 적힌 JSON 파일
+    chars: /content/drive/MyDrive/font_project/my_handwriting/ref_chars.json
+    
+    # 3. 핵심! 확장자를 png로 변경
+    extension: png 
+
+  val:
+    unseen_chars:
+      data_dir: /content/drive/MyDrive/font_project/my_handwriting
+      extension: png  # 여기도 png로 변경
+      n_gen: 10       # 검증 때 생성해 볼 글자 수 (가진 글자 수에 맞게 조절)
+      n_font: 1       # 중요! 우리가 가진 폰트(스타일)가 1개(Seoyeon)이므로 1로 변경
+      chars: data/kor/val_unseen_chars.json
+      source_path: data/kor/source.ttf  # 기준이 되는 소스 폰트 (그대로 둠)
+      source_ext: ttf                   # (그대로 둠)
+      
+    seen_chars:
+      data_dir: /content/drive/MyDrive/font_project/my_handwriting
+      extension: png  # 여기도 png로 변경
+      n_gen: 10
+      n_font: 1       # 중요! 1로 변경
+      chars: /content/drive/MyDrive/font_project/my_handwriting/ref_chars.json # train과 같은 JSON 사용 가능
+      source_path: data/kor/source.ttf
+      source_ext: ttf

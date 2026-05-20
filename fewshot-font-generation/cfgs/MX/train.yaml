@@ -1,0 +1,12 @@
+decomposition: /content/drive/MyDrive/fewshot-font-generation/data/kor/decomposition.json   # path to the "decomposition rule" file.
+primals: /content/drive/MyDrive/fewshot-font-generation/data/kor/primals.json   # path to the "primals" file.
+
+trainer:
+  print_freq: 100
+  save_freq: 1000
+  val_freq: 1000
+  resume: /content/drive/MyDrive/font_project/result_logs_2/checkpoints/last.pth
+  work_dir: /content/drive/MyDrive/font_project/result_logs_2  # the directory to save checkpoints, validation images, and the log.
+  
+gen:
+  n_experts: 3

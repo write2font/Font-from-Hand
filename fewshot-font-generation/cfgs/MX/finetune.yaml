@@ -1,0 +1,12 @@
+# train.yaml (또는 finetune.yaml)
+
+# chn -> kor 로 변경 (한국어 부수 분해 규칙 적용)
+decomposition: data/kor/decomposition.json   
+primals: data/kor/primals.json               
+
+trainer:
+  resume: /content/drive/MyDrive/font_project/result_logs/checkpoints/last.pth
+  work_dir: /content/drive/MyDrive/font_project/result_logs_finetune  
+  
+gen:
+  n_experts: 6

@@ -1,0 +1,39 @@
+FROM python:3.10-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        fontforge-nox \
+        potrace \
+        libglib2.0-0 \
+        libgl1 \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir \
+      torch==2.3.1+cpu \
+      torchvision==0.18.1+cpu \
+      torchaudio==2.3.1+cpu \
+      --index-url https://download.pytorch.org/whl/cpu
+
+RUN pip install --no-cache-dir \
+      opencv-python-headless \
+      pillow \
+      numpy==1.26.4 \
+      sconf \
+      tqdm \
+      tensorboardX \
+      msgpack \
+      scipy \
+      scikit-image \
+      fonttools \
+      adamp \
+      lpips
+
+COPY . .
+
+ENTRYPOINT []
+CMD ["python", "-X", "utf8", "write2font/run_pipeline.py", "--help"]
