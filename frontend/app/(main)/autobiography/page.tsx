@@ -2,11 +2,11 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Mic, Square, Play, Pause, Upload, X, BookOpen, Mic2, FileText, Sparkles, ChevronRight, Check } from "lucide-react";
+import { Mic, Square, Play, Pause, Upload, X, BookOpen, Mic2, FileText, Sparkles, Check, Plus } from "lucide-react";
 import axios from "axios";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
-type Step = "intro" | "info" | "image" | "questions" | "followup" | "keywords" | "generating";
+type Step = "intro" | "info" | "image" | "questions" | "followup" | "keyword" | "title" | "generating";
 
 interface RecordingState {
   status: "idle" | "recording" | "done";
@@ -15,28 +15,93 @@ interface RecordingState {
   duration: number;
 }
 
-// ── Constants ──────────────────────────────────────────────────────────────────
-const QUESTIONS = [
-  { num: 2,  category: "가족 관계",   text: "부모님은 어떤 분이셨으며, 형제들 사이에서 주로 어떤 역할이었나요?" },
-  { num: 3,  category: "유년의 풍경", text: "어린 시절, 우리 집이나 동네에서 가장 좋아했던 장소와 그곳의 분위기를 묘사해 주세요." },
-  { num: 4,  category: "기억의 조각", text: "유년 시절을 떠올리면 가장 먼저 생각나는 상징적인 사건이나 장면 하나는 무엇인가요?" },
-  { num: 5,  category: "꿈의 시작",   text: "어린 시절의 꿈은 무엇이었으며, 현재의 직업이나 전공을 선택하게 된 결정적인 계기는 무엇이었나요?" },
-  { num: 6,  category: "학교 생활",   text: "학창 시절 가장 열정적으로 몰두했던 공부나 활동은 무엇이었나요?" },
-  { num: 7,  category: "시대의 공기", text: "청년 시절, 사회적으로나 개인적으로 가장 뜨거웠던 기억(예: 첫 취업, 시대적 사건 등)은 무엇인가요?" },
-  { num: 8,  category: "인연",        text: "인생의 방향을 바꿔놓을 만큼 큰 영향을 준 스승이나 친구, 혹은 동료가 있나요?" },
-  { num: 9,  category: "시련의 순간", text: "인생에서 가장 힘들었던 시기는 언제였으며, 무엇이 당신을 가장 괴롭혔나요?" },
-  { num: 10, category: "극복의 동력", text: "그 시련을 어떻게 버텨내셨으며, 그 과정에서 무엇을 배우셨나요?" },
-  { num: 11, category: "빛나는 성취", text: "내 인생에서 \"이것만큼은 정말 잘했다\"고 자부하는 가장 큰 업적이나 결과물은 무엇인가요?" },
-  { num: 12, category: "삶의 전환점", text: "인생의 경로가 180도 바뀌었던 결정적인 선택의 순간과 그 이유를 들려주세요." },
-  { num: 13, category: "인생 철학",   text: "평생을 지탱해 온 자신만의 좌우명이나 꼭 지키고자 했던 원칙은 무엇인가요?" },
-  { num: 14, category: "후회와 조언", text: "다시 태어난다면 꼭 해보고 싶은 일이나, 후배 세대에게 꼭 전하고 싶은 한마디는 무엇인가요?" },
-  { num: 15, category: "마지막 인사", text: "훗날 사람들이 당신을 어떤 단어 혹은 어떤 사람으로 기억해주길 바라시나요?" },
+interface Question {
+  num: number;
+  category: string;
+  text: string;
+  conditionalOn?: number;
+}
+
+interface FreeEntry {
+  period: string;
+  recording: RecordingState;
+  transcription: string;
+}
+
+// ── Question Sets ──────────────────────────────────────────────────────────────
+const QUESTIONS_20S: Question[] = [
+  { num: 1, category: "유년의 풍경",    text: "어릴 때 가장 자주 가셨던 장소가 어디셨나요? 그곳이 왜 좋으셨나요?" },
+  { num: 2, category: "유년의 맛",      text: "어릴 때 집에서 자주 드시던 음식이나 냄새 중 지금도 기억에 남는 것이 있으신가요?" },
+  { num: 3, category: "학교 생활",      text: "학창 시절 공부 외에 가장 열정적으로 하셨던 것이 무엇인가요?" },
+  { num: 4, category: "첫 만남",        text: "지금 가장 친하게 지내는 사람을 처음 만났던 순간이 기억나시나요?" },
+  { num: 5, category: "어린 시절의 꿈", text: "어릴 때 어떤 사람이 되고 싶으셨나요? 지금의 모습과 어떻게 연결되나요?" },
+  { num: 6, category: "고생의 기억",    text: "지금까지 무언가를 위해 정말 고생하거나 밤새워 매달리셨던 경험이 있으신가요?" },
+  { num: 7, category: "빛나는 순간",    text: "주변 사람에게 자랑하고 싶었던 순간이 있으신가요?" },
+  { num: 8, category: "닮고 싶은 분",   text: "지금 가장 닮고 싶은 분이 계신가요? 어떤 점이 그러신가요?" },
+  { num: 9, category: "미래의 나",      text: "10년 뒤, 어떤 모습이면 좋겠다고 생각하시나요?" },
 ];
 
+const QUESTIONS_3040S: Question[] = [
+  { num: 1,  category: "유년의 풍경",  text: "어릴 때 가장 기억에 남는 장소나 풍경이 있으신가요?" },
+  { num: 2,  category: "학교 생활",    text: "학창 시절 가장 열정적으로 하셨던 것이 무엇인가요?" },
+  { num: 3,  category: "첫 도전",      text: "20대에 처음으로 혼자서 해내셨던 일이 기억나시나요?" },
+  { num: 4,  category: "소중한 인연",  text: "가장 오래 함께하신 동료나 친구가 계신가요? 어떻게 친해지셨나요?" },
+  { num: 5,  category: "삶의 전환점",  text: "지금과 전혀 다른 길을 갈 뻔했던 순간이 있으신가요?" },
+  { num: 6,  category: "만약에",       text: "만약 그 선택을 하지 않으셨다면, 지금은 어떤 모습일 것 같으세요?", conditionalOn: 4 },
+  { num: 7,  category: "고생의 기억",  text: "일이나 삶에서 가장 고되고 버거우셨던 시기는 언제였나요? 어떻게 버티셨나요?" },
+  { num: 8,  category: "빛나는 순간",  text: "일이나 생활에서 가장 뿌듯하셨던 순간은 언제인가요?" },
+  { num: 9,  category: "가족과 함께",  text: "가족과 함께 가장 기억에 남는 순간이 있으신가요?" },
+  { num: 10, category: "인생 철학",    text: "살면서 꼭 지키려 하셨던 원칙이 있으신가요?" },
+  { num: 11, category: "앞으로의 꿈",  text: "앞으로 가장 해보고 싶으신 것이 있으신가요?" },
+];
+
+const QUESTIONS_50PLUS: Question[] = [
+  { num: 1,  category: "고향의 기억",  text: "고향이 어디이신가요? 어릴 때 고향의 풍경이나 냄새 중 지금도 기억에 남는 것이 있으신가요?" },
+  { num: 2,  category: "유년의 맛",    text: "어릴 때 집에서 자주 드시던 음식이 무엇인가요? 그 맛이 아직도 기억나시나요?" },
+  { num: 3,  category: "아끼던 것",    text: "어린 시절 가장 아끼셨던 물건이나 장소가 있으신가요?" },
+  { num: 4,  category: "학교 생활",    text: "학창 시절 가장 좋아하셨던 과목이나 활동이 있으신가요?" },
+  { num: 5,  category: "첫 사회생활",  text: "처음 사회에 나오셨을 때가 기억나시나요? 어떤 일을 하셨나요?" },
+  { num: 6,  category: "고생의 기억",  text: "그 시절, 가장 고생하거나 버티기 어려우셨던 순간이 있으신가요?" },
+  { num: 7,  category: "소중한 인연",  text: "살면서 꼭 한 번 고맙다고 전하고 싶은 분이 계신가요? 그분은 어떤 분이셨나요?" },
+  { num: 8,  category: "빛나는 성취",  text: "인생에서 가장 잘하셨다고 생각하시는 일을 하나 꼽아주실 수 있으신가요?" },
+  { num: 9,  category: "만약에",       text: "만약 그 선택을 하지 않으셨다면, 지금의 삶이 어떻게 달랐을 것 같으세요?", conditionalOn: 7 },
+  { num: 10, category: "인생 철학",    text: "평생 지켜오신 나만의 원칙이나 좌우명이 있으신가요?" },
+  { num: 11, category: "젊은이에게",   text: "지금 젊은 분들에게 꼭 하고 싶으신 말씀이 있으신가요?" },
+];
+
+function getQuestions(birthDate: string): Question[] {
+  if (!birthDate) return QUESTIONS_3040S;
+  const birth = new Date(birthDate);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  if (
+    today.getMonth() < birth.getMonth() ||
+    (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())
+  ) age--;
+  if (age < 30) return QUESTIONS_20S;
+  if (age < 50) return QUESTIONS_3040S;
+  return QUESTIONS_50PLUS;
+}
+
+function getPeriods(birthDate: string): string[] {
+  if (!birthDate) return ["유년기", "청소년기", "청년기", "지금"];
+  const birth = new Date(birthDate);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  if (
+    today.getMonth() < birth.getMonth() ||
+    (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())
+  ) age--;
+  if (age < 30) return ["유년기", "청소년기", "지금"];
+  if (age < 50) return ["유년기", "청소년기", "청년기", "지금"];
+  return ["유년기", "청소년기", "청년기", "장년기", "지금"];
+}
 
 function fmtSeconds(s: number) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
+
+const emptyRecording = (): RecordingState => ({ status: "idle", blob: null, url: null, duration: 0 });
 
 // ── Main ───────────────────────────────────────────────────────────────────────
 export default function AutobiographyPage() {
@@ -44,59 +109,113 @@ export default function AutobiographyPage() {
   const [step, setStep] = useState<Step>("intro");
 
   // Info
-  const [name, setName]         = useState("");
+  const [name, setName]           = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [hometown, setHometown]   = useState("");
 
   // Image
-  const [images, setImages]      = useState<File[]>([]);
-  const imageInputRef             = useRef<HTMLInputElement>(null);
+  const [images, setImages]   = useState<File[]>([]);
+  const imageInputRef         = useRef<HTMLInputElement>(null);
 
-  // Questions (Q1–Q15)
-  const [currentQIdx, setCurrentQIdx] = useState(0);
-  const [recordings, setRecordings]   = useState<RecordingState[]>(
-    () => QUESTIONS.map(() => ({ status: "idle" as const, blob: null, url: null, duration: 0 }))
+  // Font selection
+  const [fontList, setFontList]           = useState<{fontId: string; fontName: string; type: string}[]>([]);
+  const [selectedFontId, setSelectedFontId] = useState<string | null>(null);
+  const [fontsLoading, setFontsLoading]   = useState(false);
+
+  // Questions
+  const [activeQuestions, setActiveQuestions] = useState<Question[]>(QUESTIONS_3040S);
+  const [currentQIdx, setCurrentQIdx]         = useState(0);
+  const [recordings, setRecordings]           = useState<RecordingState[]>(
+    () => QUESTIONS_3040S.map(emptyRecording)
   );
-  const [transcriptions, setTranscriptions] = useState<string[]>(Array(QUESTIONS.length).fill(""));
-  const [transcribing, setTranscribing]     = useState(false);
-  const [qPlaying, setQPlaying]             = useState(false);
-  const qAudioRef                           = useRef<HTMLAudioElement | null>(null);
+  const [transcriptions, setTranscriptions]   = useState<string[]>(Array(QUESTIONS_3040S.length).fill(""));
+  const [transcribing, setTranscribing]       = useState(false);
+  const [qPlaying, setQPlaying]               = useState(false);
+  const qAudioRef                             = useRef<HTMLAudioElement | null>(null);
+
+  // Free entries (after structured questions)
+  const [freeEntries, setFreeEntries]               = useState<FreeEntry[]>([]);
+  const [currentFreeRecordIdx, setCurrentFreeRecordIdx] = useState<number | null>(null);
+  const [freeTranscribing, setFreeTranscribing]     = useState(false);
 
   // Followup
-  const [followupQuestions, setFollowupQuestions]       = useState<string[]>([]);
-  const [followupRecordings, setFollowupRecordings]     = useState<RecordingState[]>([]);
+  const [followupQuestions, setFollowupQuestions]           = useState<string[]>([]);
+  const [followupRecordings, setFollowupRecordings]         = useState<RecordingState[]>([]);
   const [followupTranscriptions, setFollowupTranscriptions] = useState<string[]>([]);
-  const [followupTranscribing, setFollowupTranscribing] = useState(false);
-  const [currentFIdx, setCurrentFIdx]                   = useState(0);
-  const [loadingFollowup, setLoadingFollowup]           = useState(false);
-  const [fPlaying, setFPlaying]                         = useState(false);
-  const fAudioRef                                       = useRef<HTMLAudioElement | null>(null);
+  const [followupTranscribing, setFollowupTranscribing]     = useState(false);
+  const [currentFIdx, setCurrentFIdx]                       = useState(0);
+  const [loadingFollowup, setLoadingFollowup]               = useState(false);
+  const [fPlaying, setFPlaying]                             = useState(false);
+  const fAudioRef                                           = useRef<HTMLAudioElement | null>(null);
 
   // Keywords
-  const [keywords, setKeywords]               = useState<string[]>([]);
-  const [selectedKeywords, setSelectedKeywords] = useState<Set<string>>(new Set());
-  const [suggestedTitle, setSuggestedTitle]   = useState("");
-  const [loadingKeywords, setLoadingKeywords] = useState(false);
-  const [regeneratingTitle, setRegeneratingTitle] = useState(false);
+  const [keywordCandidates, setKeywordCandidates] = useState<string[]>([]);
+  const [selectedKeywords, setSelectedKeywords]   = useState<string[]>([]);
+  const [keywordsLoading, setKeywordsLoading]     = useState(false);
+
+  // Title
+  const [titleInput, setTitleInput]       = useState("");
+  const [titleGenerating, setTitleGenerating] = useState(false);
 
   // Generating
-  const [progress, setProgress]         = useState(0);
-  const progressIntervalRef             = useRef<NodeJS.Timeout | null>(null);
+  const [progress, setProgress]       = useState(0);
+  const progressIntervalRef           = useRef<NodeJS.Timeout | null>(null);
 
-  // Recording engine (shared)
-  const [isRecording, setIsRecording]   = useState(false);
-  const [recSeconds, setRecSeconds]     = useState(0);
-  const recSecondsRef                   = useRef(0);
-  const mediaRecorderRef                = useRef<MediaRecorder | null>(null);
-  const chunksRef                       = useRef<Blob[]>([]);
-  const timerRef                        = useRef<NodeJS.Timeout | null>(null);
+  // Recording engine
+  const [isRecording, setIsRecording] = useState(false);
+  const [recSeconds, setRecSeconds]   = useState(0);
+  const recSecondsRef                 = useRef(0);
+  const mediaRecorderRef              = useRef<MediaRecorder | null>(null);
+  const chunksRef                     = useRef<Blob[]>([]);
+  const timerRef                      = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => () => { timerRef.current && clearInterval(timerRef.current); }, []);
 
+  // Update question set when birthDate changes
+  useEffect(() => {
+    if (!birthDate) return;
+    const qs = getQuestions(birthDate);
+    setActiveQuestions(qs);
+    setRecordings(qs.map(emptyRecording));
+    setTranscriptions(Array(qs.length).fill(""));
+    setCurrentQIdx(0);
+    setFreeEntries([]);
+  }, [birthDate]);
+
+  // ── Navigation helpers ────────────────────────────────────────────────────────
+  const getNextQIdx = (fromIdx: number): number => {
+    let next = fromIdx + 1;
+    while (next < activeQuestions.length) {
+      const q = activeQuestions[next];
+      if (q.conditionalOn !== undefined && !transcriptions[q.conditionalOn]?.trim()) {
+        next++;
+      } else {
+        return next;
+      }
+    }
+    return activeQuestions.length; // free text screen
+  };
+
+  const getPrevQIdx = (fromIdx: number): number => {
+    let prev = Math.min(fromIdx, activeQuestions.length) - 1;
+    while (prev >= 0) {
+      const q = activeQuestions[prev];
+      if (q.conditionalOn !== undefined && !transcriptions[q.conditionalOn]?.trim()) {
+        prev--;
+      } else {
+        return prev;
+      }
+    }
+    return -1;
+  };
+
+  const isQSkipped = (idx: number): boolean => {
+    const q = activeQuestions[idx];
+    return q?.conditionalOn !== undefined && !transcriptions[q.conditionalOn]?.trim();
+  };
+
   // ── Recording ────────────────────────────────────────────────────────────────
-  const startRecording = async (
-    onDone: (blob: Blob, url: string, duration: number) => void
-  ) => {
+  const startRecording = async (onDone: (blob: Blob, url: string, duration: number) => void) => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mr = new MediaRecorder(stream);
@@ -143,7 +262,6 @@ export default function AutobiographyPage() {
       const res = await axios.post("http://localhost:8080/api/v1/autobiography/transcribe", fd);
       onResult(res.data.text ?? "");
     } catch {
-      // 백엔드 미연결 시 mock
       await new Promise((r) => setTimeout(r, 1000));
       onResult("(STT 변환 결과가 여기에 표시됩니다. 직접 입력하거나 수정하세요.)");
     } finally {
@@ -173,11 +291,7 @@ export default function AutobiographyPage() {
   };
 
   const handleQReset = () => {
-    setRecordings((prev) => {
-      const a = [...prev];
-      a[currentQIdx] = { status: "idle", blob: null, url: null, duration: 0 };
-      return a;
-    });
+    setRecordings((prev) => { const a = [...prev]; a[currentQIdx] = emptyRecording(); return a; });
     setTranscriptions((prev) => { const a = [...prev]; a[currentQIdx] = ""; return a; });
     setQPlaying(false);
   };
@@ -186,11 +300,7 @@ export default function AutobiographyPage() {
     const audio = new Audio(url);
     audio.addEventListener("loadedmetadata", () => {
       const duration = isFinite(audio.duration) ? Math.round(audio.duration) : 0;
-      setRecordings((prev) => {
-        const a = [...prev];
-        a[currentQIdx] = { status: "done", blob, url, duration };
-        return a;
-      });
+      setRecordings((prev) => { const a = [...prev]; a[currentQIdx] = { status: "done", blob, url, duration }; return a; });
     });
     transcribeBlob(
       blob,
@@ -205,19 +315,83 @@ export default function AutobiographyPage() {
     else { qAudioRef.current.play(); setQPlaying(true); qAudioRef.current.onended = () => setQPlaying(false); }
   };
 
-  // ── Followup 녹음 핸들러 ──────────────────────────────────────────────────────
-  const handleFStart = () => {
-    setFollowupRecordings((prev) => {
+  // ── Free entry 핸들러 ─────────────────────────────────────────────────────────
+  const addFreeEntry = () => {
+    const periods = getPeriods(birthDate);
+    setFreeEntries((prev) => [...prev, { period: periods[0], recording: emptyRecording(), transcription: "" }]);
+  };
+
+  const removeFreeEntry = (idx: number) => {
+    setFreeEntries((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleFreeStart = (idx: number) => {
+    setCurrentFreeRecordIdx(idx);
+    setFreeEntries((prev) => {
       const a = [...prev];
-      a[currentFIdx] = { ...a[currentFIdx], status: "recording" };
+      a[idx] = { ...a[idx], recording: { ...a[idx].recording, status: "recording" } };
       return a;
     });
     startRecording((blob, url, duration) => {
-      setFollowupRecordings((prev) => {
+      setFreeEntries((prev) => {
         const a = [...prev];
-        a[currentFIdx] = { status: "done", blob, url, duration };
+        a[idx] = { ...a[idx], recording: { status: "done", blob, url, duration } };
         return a;
       });
+      transcribeBlob(
+        blob,
+        (text) => setFreeEntries((prev) => {
+          const a = [...prev];
+          a[idx] = { ...a[idx], transcription: text };
+          return a;
+        }),
+        setFreeTranscribing
+      );
+    });
+  };
+
+  const handleFreeReset = (idx: number) => {
+    setFreeEntries((prev) => {
+      const a = [...prev];
+      a[idx] = { ...a[idx], recording: emptyRecording(), transcription: "" };
+      return a;
+    });
+  };
+
+  const handleFreeFileUpload = (idx: number, blob: Blob, url: string) => {
+    const audio = new Audio(url);
+    audio.addEventListener("loadedmetadata", () => {
+      const duration = isFinite(audio.duration) ? Math.round(audio.duration) : 0;
+      setFreeEntries((prev) => {
+        const a = [...prev];
+        a[idx] = { ...a[idx], recording: { status: "done", blob, url, duration } };
+        return a;
+      });
+    });
+    transcribeBlob(
+      blob,
+      (text) => setFreeEntries((prev) => {
+        const a = [...prev];
+        a[idx] = { ...a[idx], transcription: text };
+        return a;
+      }),
+      setFreeTranscribing
+    );
+  };
+
+  const getFormattedFreeText = () =>
+    freeEntries
+      .filter((e) => e.transcription.trim())
+      .map((e) => `[${e.period}]\n${e.transcription}`)
+      .join("\n\n");
+
+  // ── Followup 녹음 핸들러 ──────────────────────────────────────────────────────
+  const handleFStart = () => {
+    setFollowupRecordings((prev) => {
+      const a = [...prev]; a[currentFIdx] = { ...a[currentFIdx], status: "recording" }; return a;
+    });
+    startRecording((blob, url, duration) => {
+      setFollowupRecordings((prev) => { const a = [...prev]; a[currentFIdx] = { status: "done", blob, url, duration }; return a; });
       transcribeBlob(
         blob,
         (text) => setFollowupTranscriptions((prev) => { const a = [...prev]; a[currentFIdx] = text; return a; }),
@@ -227,11 +401,7 @@ export default function AutobiographyPage() {
   };
 
   const handleFReset = () => {
-    setFollowupRecordings((prev) => {
-      const a = [...prev];
-      a[currentFIdx] = { status: "idle", blob: null, url: null, duration: 0 };
-      return a;
-    });
+    setFollowupRecordings((prev) => { const a = [...prev]; a[currentFIdx] = emptyRecording(); return a; });
     setFollowupTranscriptions((prev) => { const a = [...prev]; a[currentFIdx] = ""; return a; });
     setFPlaying(false);
   };
@@ -240,11 +410,7 @@ export default function AutobiographyPage() {
     const audio = new Audio(url);
     audio.addEventListener("loadedmetadata", () => {
       const duration = isFinite(audio.duration) ? Math.round(audio.duration) : 0;
-      setFollowupRecordings((prev) => {
-        const a = [...prev];
-        a[currentFIdx] = { status: "done", blob, url, duration };
-        return a;
-      });
+      setFollowupRecordings((prev) => { const a = [...prev]; a[currentFIdx] = { status: "done", blob, url, duration }; return a; });
     });
     transcribeBlob(
       blob,
@@ -266,73 +432,62 @@ export default function AutobiographyPage() {
     try {
       const res = await axios.post("http://localhost:8080/api/v1/autobiography/generate-followups", {
         name, birthDate, hometown,
-        qas: QUESTIONS.map((q, i) => ({
+        freeText: getFormattedFreeText(),
+        qas: activeQuestions.map((q, i) => ({
           question: q.text,
           category: q.category,
           answer: transcriptions[i],
         })),
       });
       const questions: string[] = res.data.followups ?? [];
-      if (questions.length === 0) {
-        goToKeywords();
-        return;
-      }
+      if (questions.length === 0) { goToKeyword(); return; }
       setFollowupQuestions(questions);
-      setFollowupRecordings(questions.map(() => ({ status: "idle" as const, blob: null, url: null, duration: 0 })));
+      setFollowupRecordings(questions.map(emptyRecording));
       setFollowupTranscriptions(Array(questions.length).fill(""));
       setCurrentFIdx(0);
     } catch {
-      // AI 추가 질문 생성 실패 시 키워드 단계로 이동
-      goToKeywords();
+      goToKeyword();
     } finally {
       setLoadingFollowup(false);
     }
   };
 
-  const goToKeywords = async () => {
-    setStep("keywords");
-    setLoadingKeywords(true);
+  const goToKeyword = async () => {
+    setKeywordsLoading(true);
+    setSelectedKeywords([]);
+    setStep("keyword");
     try {
       const res = await axios.post("http://localhost:8080/api/v1/autobiography/suggest", {
         name, birth: birthDate,
         transcriptions,
         followup_transcriptions: followupTranscriptions,
       });
-      const kws = res.data.keywords;
-      setKeywords(Array.isArray(kws) ? kws : []);
-      setSuggestedTitle(res.data.title ?? "");
+      setKeywordCandidates(res.data.keywords ?? []);
     } catch {
-      setKeywords(["가족", "고향", "청춘", "추억", "성실", "꿈"]);
-      setSuggestedTitle("");
+      setKeywordCandidates([]);
     } finally {
-      setLoadingKeywords(false);
+      setKeywordsLoading(false);
     }
   };
 
-  const toggleKeyword = (kw: string) => {
-    setSelectedKeywords((prev) => {
-      const next = new Set(prev);
-      if (next.has(kw)) next.delete(kw);
-      else if (next.size < 3) next.add(kw);
-      return next;
-    });
+  const goToTitle = () => {
+    setTitleInput("");
+    setStep("title");
   };
 
-  const regenerateTitle = async () => {
-    if (selectedKeywords.size === 0) return;
-    setRegeneratingTitle(true);
+  const generateTitle = async () => {
+    setTitleGenerating(true);
     try {
       const res = await axios.post("http://localhost:8080/api/v1/autobiography/suggest", {
         name, birth: birthDate,
         transcriptions,
         followup_transcriptions: followupTranscriptions,
-        selected_keywords: Array.from(selectedKeywords),
       });
-      setSuggestedTitle(res.data.title ?? suggestedTitle);
+      setTitleInput(res.data.title ?? "");
     } catch {
-      // 실패 시 기존 제목 유지
+      /* 실패 시 빈 상태 유지 */
     } finally {
-      setRegeneratingTitle(false);
+      setTitleGenerating(false);
     }
   };
 
@@ -350,13 +505,16 @@ export default function AutobiographyPage() {
       fd.append("hometown", hometown);
       fd.append("transcriptions", JSON.stringify(transcriptions));
       fd.append("followup_transcriptions", JSON.stringify(followupTranscriptions));
-      fd.append("keywords", JSON.stringify(Array.from(selectedKeywords)));
-      fd.append("title", suggestedTitle);
+      fd.append("free_text", getFormattedFreeText());
+      fd.append("keywords", JSON.stringify(selectedKeywords));
+      fd.append("title", titleInput);
+      if (selectedFontId) fd.append("font_id", selectedFontId);
       images.forEach((img) => fd.append("images", img));
 
       const res = await axios.post("http://localhost:8080/api/v1/autobiography/generate", fd);
       if (res.status === 200) {
         progressIntervalRef.current && clearInterval(progressIntervalRef.current);
+        if (res.data.id) sessionStorage.setItem("autobiography_id", String(res.data.id));
         setProgress(100);
         setTimeout(() => router.push("/autobiography/result"), 800);
       }
@@ -366,6 +524,18 @@ export default function AutobiographyPage() {
         setProgress(100);
         setTimeout(() => router.push("/autobiography/result"), 800);
       }, 8000);
+    }
+  };
+
+  const fetchFonts = async () => {
+    setFontsLoading(true);
+    try {
+      const res = await axios.get("http://localhost:8080/api/v1/fonts/list", { withCredentials: true });
+      setFontList(res.data ?? []);
+    } catch {
+      setFontList([]);
+    } finally {
+      setFontsLoading(false);
     }
   };
 
@@ -391,7 +561,7 @@ export default function AutobiographyPage() {
           onChange={(e) => setHometown(e.target.value)}
           className="w-full bg-transparent outline-none text-gray-800 placeholder-gray-400 text-base" />
       </FieldCard>
-      <PrimaryButton disabled={!name || !birthDate || !hometown} onClick={() => setStep("image")}>다음</PrimaryButton>
+      <PrimaryButton disabled={!name || !birthDate || !hometown} onClick={() => { setStep("image"); fetchFonts(); }}>다음</PrimaryButton>
     </PageShell>
   );
 
@@ -422,6 +592,50 @@ export default function AutobiographyPage() {
           </div>
         )}
       </FieldCard>
+      <div className="bg-gray-100 rounded-2xl p-6 mb-4">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-sm font-bold text-gray-600">자서전에 사용할 폰트</p>
+          {!fontsLoading && fontList.length === 0 && (
+            <button onClick={fetchFonts} className="text-xs text-brand-400 hover:underline">불러오기</button>
+          )}
+        </div>
+        {fontsLoading ? (
+          <div className="flex items-center gap-2 text-gray-400 text-sm py-2">
+            <div className="w-4 h-4 border-2 border-brand-300 border-t-brand-500 rounded-full animate-spin" />
+            불러오는 중...
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <button
+              onClick={() => setSelectedFontId(null)}
+              className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition ${
+                selectedFontId === null
+                  ? "bg-brand-500 text-white"
+                  : "bg-white text-gray-600 hover:bg-gray-50 border border-gray-200"
+              }`}
+            >
+              기본 폰트 사용
+            </button>
+            {fontList.map((f) => (
+              <button
+                key={f.fontId}
+                onClick={() => setSelectedFontId(f.fontId)}
+                className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition ${
+                  selectedFontId === f.fontId
+                    ? "bg-brand-500 text-white"
+                    : "bg-white text-gray-600 hover:bg-gray-50 border border-gray-200"
+                }`}
+              >
+                {f.fontName}
+                <span className={`ml-2 text-xs ${selectedFontId === f.fontId ? "text-brand-100" : "text-gray-400"}`}>
+                  {f.type === "AI" ? "AI 생성" : "직접 제작"}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="flex gap-3 mt-8">
         <SecondaryButton className="flex-1" onClick={() => setStep("info")}>이전</SecondaryButton>
         <PrimaryButton className="flex-1" onClick={() => { setCurrentQIdx(0); setStep("questions"); }}>다음</PrimaryButton>
@@ -430,32 +644,114 @@ export default function AutobiographyPage() {
   );
 
   if (step === "questions") {
-    const q   = QUESTIONS[currentQIdx];
-    const rec = recordings[currentQIdx];
-    const tx  = transcriptions[currentQIdx];
-    const isLast = currentQIdx === QUESTIONS.length - 1;
+    const isFreeTextScreen = currentQIdx === activeQuestions.length;
+    const nextIdx = isFreeTextScreen ? activeQuestions.length + 1 : getNextQIdx(currentQIdx);
+    const prevIdx = isFreeTextScreen ? getPrevQIdx(activeQuestions.length) : getPrevQIdx(currentQIdx);
+    const periods = getPeriods(birthDate);
+
+    const dots = (
+      <div className="flex gap-1">
+        {[...activeQuestions, null].map((_, i) => {
+          const skipped = i < activeQuestions.length && isQSkipped(i);
+          return (
+            <button
+              key={i}
+              onClick={() => !skipped && setCurrentQIdx(i)}
+              className={`w-2 h-2 rounded-full transition ${
+                i === currentQIdx       ? "bg-brand-400" :
+                skipped                 ? "bg-gray-100" :
+                i < activeQuestions.length && recordings[i]?.status === "done" ? "bg-brand-200" :
+                i === activeQuestions.length && freeEntries.some((e) => e.transcription.trim()) ? "bg-brand-200" :
+                "bg-gray-200"
+              }`}
+            />
+          );
+        })}
+      </div>
+    );
+
+    if (isFreeTextScreen) return (
+      <PageShell>
+        <StepIndicator step={step} />
+        <div className="flex items-center justify-between mb-6">
+          <span className="text-sm text-gray-400 font-medium">자유 입력</span>
+          {dots}
+        </div>
+
+        <p className="text-xl font-bold text-gray-800 mb-2">꼭 담고 싶은 이야기가 있으신가요?</p>
+        <p className="text-sm text-gray-400 mb-6">시기를 선택하고 음성으로 말하거나 직접 입력해 주세요. (선택 사항)</p>
+
+        {freeEntries.map((entry, idx) => (
+          <div key={idx} className="bg-white border border-gray-100 rounded-2xl p-6 mb-4 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <select
+                value={entry.period}
+                onChange={(e) => setFreeEntries((prev) => {
+                  const a = [...prev]; a[idx] = { ...a[idx], period: e.target.value }; return a;
+                })}
+                className="text-sm font-bold text-brand-500 bg-transparent outline-none cursor-pointer"
+              >
+                {periods.map((p) => <option key={p} value={p}>{p}</option>)}
+              </select>
+              <button onClick={() => removeFreeEntry(idx)} className="text-gray-300 hover:text-red-400 transition">
+                <X size={16} />
+              </button>
+            </div>
+            <FreeEntryArea
+              entry={entry}
+              isRecordingThis={isRecording && currentFreeRecordIdx === idx}
+              recSeconds={recSeconds}
+              transcribing={freeTranscribing && currentFreeRecordIdx === idx}
+              onStart={() => handleFreeStart(idx)}
+              onStop={stopRecording}
+              onReset={() => handleFreeReset(idx)}
+              onTranscriptChange={(v) => setFreeEntries((prev) => {
+                const a = [...prev]; a[idx] = { ...a[idx], transcription: v }; return a;
+              })}
+              onFileUpload={(blob, url) => handleFreeFileUpload(idx, blob, url)}
+            />
+          </div>
+        ))}
+
+        <button
+          onClick={addFreeEntry}
+          className="w-full py-4 border-2 border-dashed border-gray-200 rounded-2xl text-gray-400 hover:border-brand-300 hover:text-brand-400 transition flex items-center justify-center gap-2 mb-6"
+        >
+          <Plus size={16} />
+          이야기 추가
+        </button>
+
+        <div className="flex gap-3">
+          <SecondaryButton className="flex-1" onClick={() => {
+            if (prevIdx === -1) setStep("image");
+            else setCurrentQIdx(prevIdx);
+          }}>
+            이전
+          </SecondaryButton>
+          <PrimaryButton className="flex-1" onClick={handleQuestionsNext}>
+            완료
+          </PrimaryButton>
+        </div>
+      </PageShell>
+    );
+
+    const q   = activeQuestions[currentQIdx];
+    const rec = recordings[currentQIdx] ?? emptyRecording();
+    const tx  = transcriptions[currentQIdx] ?? "";
 
     return (
       <PageShell>
         <StepIndicator step={step} />
-        {/* 질문 진행 도트 */}
         <div className="flex items-center justify-between mb-8">
-          <span className="text-sm text-gray-400 font-medium">질문 {currentQIdx + 1} / {QUESTIONS.length}</span>
-          <div className="flex gap-1">
-            {QUESTIONS.map((_, i) => (
-              <button key={i} onClick={() => setCurrentQIdx(i)}
-                className={`w-2 h-2 rounded-full transition ${i === currentQIdx ? "bg-brand-400" : recordings[i].status === "done" ? "bg-brand-200" : "bg-gray-200"}`} />
-            ))}
-          </div>
+          <span className="text-sm text-gray-400 font-medium">질문 {currentQIdx + 1} / {activeQuestions.length}</span>
+          {dots}
         </div>
 
-        {/* 질문 카드 */}
         <div className="bg-gray-100 rounded-2xl p-8 mb-6">
           <p className="text-xs font-bold text-brand-400 uppercase tracking-widest mb-3">{q.category}</p>
           <p className="text-xl font-bold text-gray-800 leading-relaxed">{q.text}</p>
         </div>
 
-        {/* 녹음 영역 */}
         <RecordingArea
           recording={rec}
           isRecording={isRecording}
@@ -473,11 +769,14 @@ export default function AutobiographyPage() {
         />
 
         <div className="flex gap-3 mt-8">
-          <SecondaryButton className="flex-1" onClick={() => currentQIdx === 0 ? setStep("image") : setCurrentQIdx((i) => i - 1)}>
+          <SecondaryButton className="flex-1" onClick={() => {
+            if (prevIdx === -1) setStep("image");
+            else setCurrentQIdx(prevIdx);
+          }}>
             이전
           </SecondaryButton>
-          <PrimaryButton className="flex-1" onClick={() => isLast ? handleQuestionsNext() : setCurrentQIdx((i) => i + 1)}>
-            {isLast ? "완료" : "다음 질문"}
+          <PrimaryButton className="flex-1" onClick={() => setCurrentQIdx(nextIdx)}>
+            {nextIdx >= activeQuestions.length ? "다음" : "다음 질문"}
           </PrimaryButton>
         </div>
       </PageShell>
@@ -494,9 +793,9 @@ export default function AutobiographyPage() {
       </PageShell>
     );
 
-    const fq  = followupQuestions[currentFIdx];
-    const frec = followupRecordings[currentFIdx];
-    const ftx  = followupTranscriptions[currentFIdx];
+    const fq    = followupQuestions[currentFIdx];
+    const frec  = followupRecordings[currentFIdx] ?? emptyRecording();
+    const ftx   = followupTranscriptions[currentFIdx] ?? "";
     const isLast = currentFIdx === followupQuestions.length - 1;
 
     return (
@@ -518,11 +817,11 @@ export default function AutobiographyPage() {
         </div>
 
         <RecordingArea
-          recording={frec ?? { status: "idle", blob: null, url: null, duration: 0 }}
+          recording={frec}
           isRecording={isRecording}
           recSeconds={recSeconds}
           transcribing={followupTranscribing}
-          transcript={ftx ?? ""}
+          transcript={ftx}
           isPlaying={fPlaying}
           audioRef={fAudioRef}
           onStart={handleFStart}
@@ -537,7 +836,7 @@ export default function AutobiographyPage() {
           <SecondaryButton className="flex-1" onClick={() => currentFIdx === 0 ? setStep("questions") : setCurrentFIdx((i) => i - 1)}>
             이전
           </SecondaryButton>
-          <PrimaryButton className="flex-1" onClick={() => isLast ? goToKeywords() : setCurrentFIdx((i) => i + 1)}>
+          <PrimaryButton className="flex-1" onClick={() => isLast ? goToKeyword() : setCurrentFIdx((i) => i + 1)}>
             {isLast ? "완료" : "다음 질문"}
           </PrimaryButton>
         </div>
@@ -545,59 +844,87 @@ export default function AutobiographyPage() {
     );
   }
 
-  if (step === "keywords") return (
+  if (step === "keyword") return (
     <PageShell>
       <StepIndicator step={step} />
-      <h1 className="text-2xl font-bold mb-8">키워드 선택</h1>
-      {loadingKeywords ? (
-        <div className="flex flex-col items-center py-24 gap-4 text-gray-400">
-          <div className="w-8 h-8 border-2 border-brand-300 border-t-brand-500 rounded-full animate-spin" />
-          <span className="text-sm">키워드를 추출하고 있어요...</span>
+      <h1 className="text-2xl font-bold mb-2">핵심 키워드 선택</h1>
+      <p className="text-sm text-gray-400 mb-8">자서전의 분위기를 결정할 키워드를 2~3개 골라주세요.</p>
+      {keywordsLoading ? (
+        <div className="flex items-center justify-center py-16 text-gray-400 gap-3">
+          <div className="w-5 h-5 border-2 border-gray-300 border-t-brand-500 rounded-full animate-spin" />
+          <span className="text-sm">키워드 분석 중...</span>
         </div>
       ) : (
-        <>
-          <div className="bg-gray-100 rounded-2xl p-6 mb-6">
-            <p className="text-xs text-gray-400 mb-4">2~3개를 선택하세요 ({selectedKeywords.size}/3)</p>
-            <div className="grid grid-cols-3 gap-3">
-              {keywords.map((kw) => (
-                <button key={kw} onClick={() => toggleKeyword(kw)}
-                  className={`py-4 rounded-xl text-sm font-medium transition ${
-                    selectedKeywords.has(kw) ? "bg-brand-400 text-white" : "bg-brand-200 text-gray-700 hover:bg-brand-300"
-                  }`}>
-                  {kw}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="bg-gray-100 rounded-2xl p-6 mb-6">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-bold text-gray-600">예상 제목</p>
+        <div className="flex flex-wrap gap-3 mb-10">
+          {keywordCandidates.map((kw) => {
+            const active = selectedKeywords.includes(kw);
+            return (
               <button
-                onClick={regenerateTitle}
-                disabled={selectedKeywords.size === 0 || regeneratingTitle}
-                className="text-xs text-brand-400 hover:text-brand-600 disabled:text-gray-300 transition"
+                key={kw}
+                onClick={() => {
+                  if (active) {
+                    setSelectedKeywords((p) => p.filter((k) => k !== kw));
+                  } else if (selectedKeywords.length < 3) {
+                    setSelectedKeywords((p) => [...p, kw]);
+                  }
+                }}
+                className={`px-5 py-2.5 rounded-full text-sm font-medium border transition ${
+                  active
+                    ? "bg-brand-500 text-white border-brand-500"
+                    : "bg-white text-gray-600 border-gray-200 hover:border-brand-300"
+                } ${!active && selectedKeywords.length >= 3 ? "opacity-40 cursor-not-allowed" : ""}`}
               >
-                {regeneratingTitle ? "생성 중..." : "키워드로 재생성"}
+                {kw}
               </button>
-            </div>
-            <input
-              type="text"
-              value={suggestedTitle}
-              onChange={(e) => setSuggestedTitle(e.target.value)}
-              className="w-full bg-transparent outline-none text-gray-800 text-base"
-              placeholder="제목을 직접 입력하거나 재생성하세요"
-            />
-          </div>
-          <div className="flex gap-3 mt-8">
-            <SecondaryButton className="flex-1" onClick={() => followupQuestions.length > 0 ? setStep("followup") : setStep("questions")}>
-              이전
-            </SecondaryButton>
-            <PrimaryButton className="flex-1" disabled={selectedKeywords.size < 2} onClick={handleGenerate}>
-              자서전 생성 시작
-            </PrimaryButton>
-          </div>
-        </>
+            );
+          })}
+        </div>
       )}
+      <div className="flex gap-3">
+        <SecondaryButton className="flex-1" onClick={() => followupQuestions.length > 0 ? setStep("followup") : setStep("questions")}>
+          이전
+        </SecondaryButton>
+        <PrimaryButton className="flex-1" onClick={goToTitle} disabled={selectedKeywords.length < 2}>
+          다음 ({selectedKeywords.length}/3)
+        </PrimaryButton>
+      </div>
+    </PageShell>
+  );
+
+  if (step === "title") return (
+    <PageShell>
+      <StepIndicator step={step} />
+      <h1 className="text-2xl font-bold mb-8">자서전 제목</h1>
+
+      <div className="bg-gray-100 rounded-2xl p-6 mb-4">
+        <p className="text-sm font-bold text-gray-600 mb-3">제목</p>
+        <input
+          type="text"
+          value={titleInput}
+          onChange={(e) => setTitleInput(e.target.value)}
+          placeholder="자서전 제목을 입력해 주세요"
+          className="w-full bg-transparent outline-none text-gray-800 text-base placeholder-gray-300"
+          autoFocus
+        />
+      </div>
+
+      <button
+        onClick={generateTitle}
+        disabled={titleGenerating}
+        className="w-full py-4 rounded-2xl border border-brand-300 text-brand-500 font-bold hover:bg-brand-50 transition disabled:opacity-50 flex items-center justify-center gap-2 mb-8"
+      >
+        <Sparkles size={16} />
+        {titleGenerating ? "생성 중..." : "AI로 제목 생성"}
+      </button>
+
+      <div className="flex gap-3">
+        <SecondaryButton className="flex-1" onClick={() => setStep("keyword")}>
+          이전
+        </SecondaryButton>
+        <PrimaryButton className="flex-1" onClick={handleGenerate}>
+          자서전 생성 시작
+        </PrimaryButton>
+      </div>
     </PageShell>
   );
 
@@ -607,7 +934,6 @@ export default function AutobiographyPage() {
     return (
       <div className="min-h-screen bg-gradient-to-b from-brand-50 to-white flex flex-col items-center justify-center px-6">
         <div className="w-full max-w-md text-center">
-          {/* 아이콘 */}
           <div className="relative w-24 h-24 mx-auto mb-10">
             <div className="absolute inset-0 rounded-full bg-brand-100 animate-ping opacity-40" />
             <div className="relative w-24 h-24 rounded-full bg-brand-500 flex items-center justify-center shadow-lg shadow-brand-200">
@@ -618,7 +944,6 @@ export default function AutobiographyPage() {
           <h1 className="text-2xl font-bold text-gray-900 mb-2">자서전을 만들고 있어요</h1>
           <p className="text-gray-400 text-sm mb-10">{name}님의 소중한 이야기를 담고 있습니다</p>
 
-          {/* 진행바 */}
           <div className="relative w-full h-3 bg-gray-100 rounded-full overflow-hidden mb-3">
             <div className="absolute left-0 top-0 h-full bg-gradient-to-r from-brand-400 to-brand-600 rounded-full transition-all duration-500"
               style={{ width: `${progress}%` }} />
@@ -628,7 +953,6 @@ export default function AutobiographyPage() {
             <span>{progress}%</span>
           </div>
 
-          {/* 단계 표시 */}
           <div className="flex justify-center gap-2 mb-10">
             {steps.map((s, i) => (
               <div key={s} className={`flex flex-col items-center gap-1.5 ${i <= stepIdx ? "opacity-100" : "opacity-30"}`}>
@@ -637,7 +961,7 @@ export default function AutobiographyPage() {
             ))}
           </div>
 
-          <button onClick={() => { progressIntervalRef.current && clearInterval(progressIntervalRef.current); setStep("keywords"); }}
+          <button onClick={() => { progressIntervalRef.current && clearInterval(progressIntervalRef.current); setStep("title"); }}
             className="text-sm text-gray-400 hover:text-gray-600 transition underline underline-offset-2">
             생성 취소
           </button>
@@ -647,6 +971,49 @@ export default function AutobiographyPage() {
   }
 
   return null;
+}
+
+// ── FreeEntryArea ──────────────────────────────────────────────────────────────
+function FreeEntryArea({
+  entry, isRecordingThis, recSeconds, transcribing,
+  onStart, onStop, onReset, onTranscriptChange, onFileUpload,
+}: {
+  entry: FreeEntry;
+  isRecordingThis: boolean;
+  recSeconds: number;
+  transcribing: boolean;
+  onStart: () => void;
+  onStop: () => void;
+  onReset: () => void;
+  onTranscriptChange: (v: string) => void;
+  onFileUpload: (blob: Blob, url: string) => void;
+}) {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const togglePlay = () => {
+    if (!audioRef.current) return;
+    if (isPlaying) { audioRef.current.pause(); setIsPlaying(false); }
+    else { audioRef.current.play(); setIsPlaying(true); audioRef.current.onended = () => setIsPlaying(false); }
+  };
+
+  return (
+    <RecordingArea
+      recording={entry.recording}
+      isRecording={isRecordingThis}
+      recSeconds={recSeconds}
+      transcribing={transcribing}
+      transcript={entry.transcription}
+      isPlaying={isPlaying}
+      audioRef={audioRef}
+      onStart={onStart}
+      onStop={onStop}
+      onReset={onReset}
+      onTogglePlay={togglePlay}
+      onTranscriptChange={onTranscriptChange}
+      onFileUpload={onFileUpload}
+    />
+  );
 }
 
 // ── RecordingArea ──────────────────────────────────────────────────────────────
@@ -682,7 +1049,6 @@ function RecordingArea({
   return (
     <div className="space-y-4">
       <input type="file" accept="audio/*" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
-      {/* 녹음 컨트롤 */}
       <div className="bg-gray-100 rounded-2xl p-6">
         {recording.status === "idle" && !active && (
           <div className="flex justify-center gap-3">
@@ -720,9 +1086,7 @@ function RecordingArea({
               {isPlaying ? <Pause size={16} /> : <Play size={16} />}
             </button>
             <audio ref={audioRef} src={recording.url} />
-            <span className="text-sm text-gray-500 flex-1">
-              녹음 완료 ({fmtSeconds(recording.duration)})
-            </span>
+            <span className="text-sm text-gray-500 flex-1">녹음 완료 ({fmtSeconds(recording.duration)})</span>
             <button onClick={onReset} className="text-xs text-gray-400 hover:text-red-400 transition">
               다시 녹음
             </button>
@@ -730,7 +1094,6 @@ function RecordingArea({
         )}
       </div>
 
-      {/* STT 결과 / 텍스트 직접 입력 */}
       <div className="bg-gray-100 rounded-2xl p-6">
         <p className="text-xs font-bold text-gray-500 mb-3">
           답변 입력 <span className="text-gray-400 font-normal">(음성 변환 후 수정하거나 직접 입력하세요)</span>
@@ -757,16 +1120,15 @@ function RecordingArea({
 // ── IntroStep ──────────────────────────────────────────────────────────────────
 function IntroStep({ onNext }: { onNext: () => void }) {
   const steps = [
-    { icon: <Mic2 size={20} />,     label: "음성으로 답변",   desc: "14가지 질문에 음성으로 답해요" },
-    { icon: <FileText size={20} />, label: "즉시 텍스트 변환", desc: "AI가 음성을 글로 바꾸고 수정할 수 있어요" },
-    { icon: <Sparkles size={20} />, label: "AI 자서전 생성",   desc: "Claude가 나만의 자서전을 완성해요" },
-    { icon: <BookOpen size={20} />, label: "폰트 적용 PDF",    desc: "손글씨 폰트가 담긴 PDF로 완성돼요" },
+    { icon: <Mic2 size={20} />,     label: "음성으로 답변",    desc: "나이에 맞는 질문에 음성으로 답해요" },
+    { icon: <FileText size={20} />, label: "즉시 텍스트 변환",  desc: "AI가 음성을 글로 바꾸고 수정할 수 있어요" },
+    { icon: <Sparkles size={20} />, label: "AI 자서전 생성",    desc: "Claude가 나만의 자서전을 완성해요" },
+    { icon: <BookOpen size={20} />, label: "폰트 적용 PDF",     desc: "손글씨 폰트가 담긴 PDF로 완성돼요" },
   ];
 
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-3xl mx-auto px-6 pt-16 pb-20">
-        {/* 히어로 */}
         <div className="bg-gray-100 rounded-3xl p-10 mb-8">
           <p className="text-xs font-bold text-brand-400 uppercase tracking-widest mb-4">AI 자서전 시스템</p>
           <h2 className="text-3xl font-bold text-gray-900 leading-tight mb-4">
@@ -778,7 +1140,6 @@ function IntroStep({ onNext }: { onNext: () => void }) {
           </p>
         </div>
 
-        {/* 과정 안내 */}
         <div className="space-y-3 mb-10">
           {steps.map((s, i) => (
             <div key={i} className="flex items-center gap-4 bg-gray-50 rounded-2xl px-6 py-4">
@@ -789,9 +1150,6 @@ function IntroStep({ onNext }: { onNext: () => void }) {
                 <p className="text-sm font-bold text-gray-800">{s.label}</p>
                 <p className="text-xs text-gray-400 mt-0.5">{s.desc}</p>
               </div>
-              {i < steps.length - 1 && (
-                <ChevronRight size={16} className="text-gray-300 shrink-0" />
-              )}
             </div>
           ))}
         </div>
@@ -850,12 +1208,12 @@ function SecondaryButton({
 }
 
 // ── StepIndicator ──────────────────────────────────────────────────────────────
-const MACRO_STEPS = ["기본 정보", "인터뷰", "키워드", "생성"];
+const MACRO_STEPS = ["기본 정보", "인터뷰", "제목", "생성"];
 
 function stepIndexOf(step: Step): number {
   if (step === "info" || step === "image") return 0;
   if (step === "questions" || step === "followup") return 1;
-  if (step === "keywords") return 2;
+  if (step === "keyword" || step === "title") return 2;
   return 3;
 }
 
@@ -867,9 +1225,7 @@ function StepIndicator({ step }: { step: Step }) {
         <React.Fragment key={i}>
           <div className="flex flex-col items-center gap-2">
             <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-colors ${
-              i < current  ? "bg-brand-500 text-white" :
-              i === current ? "bg-brand-500 text-white" :
-              "bg-gray-100 text-gray-400"
+              i <= current ? "bg-brand-500 text-white" : "bg-gray-100 text-gray-400"
             }`}>
               {i < current ? <Check size={18} /> : i + 1}
             </div>
