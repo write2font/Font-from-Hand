@@ -93,38 +93,37 @@ class WebResearcher:
 
     def research(self, region: str, birth_year: str) -> dict:
         """
-        지역 + 출생연도 기반으로 실제 역사/문화 정보를 수집합니다.
+        지역 + 출생연도 기반으로 시대적 배경 정보를 수집합니다.
+        수집한 정보는 자서전 챕터 작성 시 지역/시대 맥락으로 활용됩니다.
         """
         parsed = self.parse_region(region)
         decade = f"{birth_year[:3]}0년대"
 
-        # 검색에 쓸 지역 조합
-        small  = parsed["면읍동"] or parsed["시군"] or region   # 가장 작은 단위
         medium = " ".join(filter(None, [parsed["도"], parsed["시군"]])) or region
         large  = parsed["도"] or region
 
         print(f"[Web] 검색 중: {region} / {decade}...")
 
-        region_history = self._search(f"{small} 역사 유래 지명", max_results=2)
-        if not region_history:
-            region_history = self._search(f"{medium} 역사 유래", max_results=2)
+        # 고향의 역사·풍경 (가장 구체적인 단위 → 도 단위 순으로 폴백)
+        region_history = (
+            self._search(f"{medium} {decade} 역사 생활 풍경", max_results=2)
+            or self._search(f"{medium} 역사 유래", max_results=2)
+            or self._search(f"{large} {decade} 지역 생활", max_results=2)
+        )
 
-        era_background = self._search(f"한국 {decade} 농촌 생활상 서민 사회", max_results=2)
+        # 해당 연도 한국 시대적 배경
+        era_background = self._search(f"한국 {decade} 시대 사회 생활 배경", max_results=2)
 
-        local_culture  = self._search(f"{large} 세시풍속 마을 행사 농촌 생활", max_results=2)
-
-        landmarks = self._search(f"{small} 장소 냇가 시장 학교 지명", max_results=2)
-        if not landmarks:
-            landmarks = self._search(f"{medium} 명소 하천 시장", max_results=2)
-
-        era_events = self._search(f"한국 {decade} 6.25 전후 역사 사건 농촌", max_results=2)
+        # 지역 문화·풍습
+        local_culture = (
+            self._search(f"{medium} 문화 풍습 생활", max_results=2)
+            or self._search(f"{large} 지역 문화 특색", max_results=2)
+        )
 
         result = {
-            "region_history": region_history or f"{region}은 유서 깊은 고을이다.",
-            "era_background": era_background or f"{decade}는 전쟁 이후 재건의 시대였다.",
-            "local_culture":  local_culture  or f"{large} 특유의 정겨운 풍습이 있었다.",
-            "landmarks":      landmarks      or f"{small} 일대의 냇가와 들판, 장터.",
-            "era_events":     era_events     or "6.25 이후 국가 재건과 경제 성장의 시대.",
+            "region_history": region_history or f"{region} 지역의 풍경.",
+            "era_background": era_background or f"한국 {decade}의 시대.",
+            "local_culture":  local_culture  or f"{large} 지역의 생활 문화.",
         }
 
         print(f"[Web] 수집 완료 ✓")

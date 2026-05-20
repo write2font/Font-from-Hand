@@ -20,10 +20,10 @@ class FontHandler:
     PDF 생성 시 FPDF2에 등록할 수 있는 메타 정보를 제공합니다.
     """
 
-    def __init__(self, user_id: str):
+    def __init__(self, user_id: str, font_path: str = None):
         self.user_id      = user_id
         self.font_dir     = config.FONT_DIR
-        self.font_path    = self._resolve_font_path()
+        self.font_path    = font_path if (font_path and os.path.exists(font_path)) else self._resolve_font_path()
         self.font_name    = self._derive_font_name()
         self.is_custom    = self._check_is_custom()
 

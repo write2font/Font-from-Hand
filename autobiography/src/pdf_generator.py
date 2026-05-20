@@ -45,9 +45,9 @@ class AutobiographyPDF(FPDF):
 
 
 class PDFGenerator:
-    def __init__(self, user_id: str):
+    def __init__(self, user_id: str, font_path: str = None):
         self.user_id    = user_id
-        font_handler    = FontHandler(user_id)
+        font_handler    = FontHandler(user_id, font_path=font_path)
         self.font_info  = font_handler.get_font_info()
         self.output_dir = os.path.join(config.OUTPUT_DIR, user_id)
         os.makedirs(self.output_dir, exist_ok=True)
@@ -121,56 +121,55 @@ class PDFGenerator:
                 pdf.font_name = "Helvetica"
 
     def _draw_cover(self, pdf, user_name, persona, birth_year, image_path, autobiography={}):
-        # 배경색 (이미지 없을 때)
-        pdf.set_fill_color(245, 240, 230)
-        pdf.rect(0, 0, pdf.w, pdf.h, "F")
+        cover_title = autobiography.get("cover_title") or f"{user_name}의 이야기"
+        m = config.PDF_MARGIN_MM
 
         if image_path and os.path.exists(image_path):
-            # 이미지 원본 비율 유지하면서 최대 너비/높이 안에 맞추기
-            from PIL import Image as PILImage
+            # AI 이미지를 전체 페이지 배경으로 채우기
+            pdf.image(image_path, x=0, y=0, w=pdf.w, h=pdf.h)
+
+            # 하단 반투명 어두운 오버레이 (텍스트 가독성용)
+            overlay_h = pdf.h * 0.40
+            overlay_y = pdf.h - overlay_h
             try:
-                with PILImage.open(image_path) as im:
-                    orig_w, orig_h = im.size
+                with pdf.local_context(fill_opacity=0.60):
+                    pdf.set_fill_color(15, 10, 8)
+                    pdf.rect(0, overlay_y, pdf.w, overlay_h, "F")
             except Exception:
-                orig_w, orig_h = 1, 1
+                pdf.set_fill_color(15, 10, 8)
+                pdf.rect(0, overlay_y, pdf.w, overlay_h, "F")
 
-            max_w = pdf.w                  # 페이지 너비
-            max_h = pdf.h * 0.62           # 상단 62% 영역
+            # 제목 텍스트 (오버레이 위, 흰색)
+            pdf.set_y(overlay_y + 10)
+            pdf.set_font(self.font_info["font_name"], size=config.PDF_TITLE_FONT_SIZE + 2)
+            pdf.set_text_color(255, 255, 255)
+            pdf.multi_cell(0, 10, cover_title, align="C")
+            pdf.ln(4)
 
-            ratio = min(max_w / orig_w, max_h / orig_h)
-            img_w = orig_w * ratio
-            img_h = orig_h * ratio
+            # 구분선 (밝은 색)
+            pdf.set_draw_color(200, 180, 150)
+            pdf.set_line_width(0.4)
+            pdf.line(m + 10, pdf.get_y(), pdf.w - m - 10, pdf.get_y())
 
-            # 수평 중앙 정렬
-            img_x = (pdf.w - img_w) / 2
-            pdf.image(image_path, x=img_x, y=0, w=img_w, h=img_h)
-
-            # 이미지 아래 배경
-            img_bottom = img_h
-            pdf.set_fill_color(245, 240, 230)
-            pdf.rect(0, img_bottom, pdf.w, pdf.h - img_bottom, "F")
-            title_y = img_bottom + 4
         else:
-            # 이미지 없으면 장식용 선만
+            # 이미지 없을 때: 따뜻한 단색 배경
+            pdf.set_fill_color(245, 240, 230)
+            pdf.rect(0, 0, pdf.w, pdf.h, "F")
+
             pdf.set_draw_color(180, 160, 130)
             pdf.set_line_width(0.5)
             pdf.line(10, pdf.h * 0.62, pdf.w - 10, pdf.h * 0.62)
-            title_y = pdf.h * 0.45
 
-        # 본제목
-        cover_title = autobiography.get("cover_title") or f"{user_name}의 이야기"
-        pdf.set_y(title_y)
-        pdf.set_font(self.font_info["font_name"], size=config.PDF_TITLE_FONT_SIZE + 2)
-        pdf.set_text_color(40, 30, 20)
-        pdf.multi_cell(0, 10, cover_title, align="C")
-        pdf.ln(5)
+            pdf.set_y(pdf.h * 0.45)
+            pdf.set_font(self.font_info["font_name"], size=config.PDF_TITLE_FONT_SIZE + 2)
+            pdf.set_text_color(40, 30, 20)
+            pdf.multi_cell(0, 10, cover_title, align="C")
+            pdf.ln(5)
 
-        # 구분선
-        m = config.PDF_MARGIN_MM
-        pdf.set_draw_color(160, 140, 110)
-        pdf.set_line_width(0.3)
-        pdf.line(m + 10, pdf.get_y(), pdf.w - m - 10, pdf.get_y())
-        pdf.ln(5)
+            pdf.set_draw_color(160, 140, 110)
+            pdf.set_line_width(0.3)
+            pdf.line(m + 10, pdf.get_y(), pdf.w - m - 10, pdf.get_y())
+            pdf.ln(5)
 
         pdf.set_text_color(0, 0, 0)
 
