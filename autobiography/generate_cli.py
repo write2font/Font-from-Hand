@@ -42,18 +42,23 @@ def main():
         followup_tx   = data.get("followup_transcriptions", [])
         keywords      = data.get("keywords", [])
         title         = data.get("title", "") or ""  # 비어있으면 AI가 자동 생성
+        free_text     = data.get("free_text", "") or ""
         cover_image   = data.get("cover_image_path", None)
+        font_path     = data.get("font_path", None)
 
         segments = [
             {"question": q, "answer": transcriptions[i] if i < len(transcriptions) else ""}
             for i, q in enumerate(questions)
+            if i < len(transcriptions) and transcriptions[i].strip()
         ]
 
         transcript_text = f"이름: {name}\n생년월일: {birth}\n고향: {hometown}\n\n"
         for seg in segments:
             transcript_text += f"{seg['question']}\n{seg['answer']}\n\n"
         if followup_tx:
-            transcript_text += "\n[추가 답변]\n" + "\n".join(followup_tx)
+            transcript_text += "\n[추가 답변]\n" + "\n".join(t for t in followup_tx if t.strip())
+        if free_text.strip():
+            transcript_text += f"\n[직접 남긴 이야기]\n{free_text}"
 
         from src.nlp_processor import NLPProcessor
         from src.pdf_generator import PDFGenerator
@@ -74,9 +79,11 @@ def main():
             birth_date_str=birth,
             user_name=name,
             region_info=region_info,
-            selected_keywords=keywords,
+            selected_keywords=keywords if keywords else None,
             segments=segments,
         )
+        if title.strip():
+            autobiography["cover_title"] = title.strip()
         nlp.save_summary(autobiography, user_id)
 
         if not cover_image and config.OPENAI_API_KEY:
@@ -99,7 +106,7 @@ def main():
                 print(f"[이미지] 표지 생성 실패 (건너뜀): {e}")
                 cover_image = None
 
-        pdf_path = PDFGenerator(user_id=user_id).generate(autobiography, cover_image_path=cover_image)
+        pdf_path = PDFGenerator(user_id=user_id, font_path=font_path).generate(autobiography, cover_image_path=cover_image)
         print(json.dumps({"pdf_path": pdf_path}, ensure_ascii=False))
 
     except Exception as e:
