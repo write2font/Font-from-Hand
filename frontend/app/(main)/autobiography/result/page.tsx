@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Check, Download, ArrowLeft, Star } from "lucide-react";
 import Link from "next/link";
 import PageHeader from "@/components/ui/PageHeader";
@@ -54,8 +54,43 @@ function SurveyForm() {
 }
 
 export default function AutobiographyResultPage() {
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(true);
+  const [pdfError, setPdfError] = useState(false);
+  const blobUrlRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const autoId = sessionStorage.getItem("autobiography_id");
+    const url = autoId
+      ? `http://localhost:8080/api/v1/autobiography/download/${autoId}?inline=true`
+      : "http://localhost:8080/api/v1/autobiography/download?inline=true";
+    fetch(url, {
+      credentials: "include",
+    })
+      .then((r) => {
+        if (!r.ok) throw new Error("not ok");
+        return r.blob();
+      })
+      .then((blob) => {
+        const url = URL.createObjectURL(blob);
+        blobUrlRef.current = url;
+        setPdfBlobUrl(url);
+      })
+      .catch(() => setPdfError(true))
+      .finally(() => setPdfLoading(false));
+
+    return () => {
+      if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
+    };
+  }, []);
+
   const handleDownload = () => {
-    window.location.href = "http://localhost:8080/api/v1/autobiography/download";
+    if (pdfBlobUrl) {
+      const a = document.createElement("a");
+      a.href = pdfBlobUrl;
+      a.download = "autobiography.pdf";
+      a.click();
+    }
   };
 
   return (
@@ -88,12 +123,25 @@ export default function AutobiographyResultPage() {
 
         <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-gray-100 mb-8">
           <h3 className="text-lg font-bold mb-6">미리보기</h3>
-          <iframe
-            src="http://localhost:8080/api/v1/autobiography/download?inline=true"
-            className="w-full rounded-2xl border border-gray-100"
-            style={{ height: "600px" }}
-            title="자서전 미리보기"
-          />
+          {pdfLoading ? (
+            <div className="w-full flex items-center justify-center bg-gray-50 rounded-2xl border border-gray-100" style={{ height: "600px" }}>
+              <div className="flex flex-col items-center gap-3 text-gray-400">
+                <div className="w-8 h-8 border-2 border-gray-300 border-t-gray-500 rounded-full animate-spin" />
+                <span className="text-sm">PDF 불러오는 중...</span>
+              </div>
+            </div>
+          ) : pdfError || !pdfBlobUrl ? (
+            <div className="w-full flex items-center justify-center bg-gray-50 rounded-2xl border border-gray-100" style={{ height: "600px" }}>
+              <p className="text-sm text-gray-400">미리보기를 불러올 수 없습니다. 아래에서 다운로드해 주세요.</p>
+            </div>
+          ) : (
+            <iframe
+              src={pdfBlobUrl}
+              className="w-full rounded-2xl border border-gray-100"
+              style={{ height: "600px" }}
+              title="자서전 미리보기"
+            />
+          )}
         </div>
 
         <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-gray-100 mb-8">

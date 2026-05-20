@@ -15,6 +15,7 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/autobiography")
@@ -24,9 +25,12 @@ public class AutobiographyController {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final String autoDir = Paths.get(System.getProperty("user.dir"), "..", "autobiography").normalize().toString();
     private final AutobiographyRepository autobiographyRepository;
+    private final com.example.backend.repository.FontRepository fontRepository;
 
-    public AutobiographyController(AutobiographyRepository autobiographyRepository) {
+    public AutobiographyController(AutobiographyRepository autobiographyRepository,
+                                   com.example.backend.repository.FontRepository fontRepository) {
         this.autobiographyRepository = autobiographyRepository;
+        this.fontRepository = fontRepository;
     }
 
     private static final List<String> QUESTIONS = List.of(
@@ -142,8 +146,10 @@ public class AutobiographyController {
             @RequestParam("hometown")                String hometown,
             @RequestParam("transcriptions")          String transcriptionsJson,
             @RequestParam("followup_transcriptions") String followupJson,
+            @RequestParam(value = "free_text", required = false, defaultValue = "") String freeText,
             @RequestParam("keywords")                String keywordsJson,
             @RequestParam(value = "title", required = false, defaultValue = "") String title,
+            @RequestParam(value = "font_id", required = false, defaultValue = "") String fontId,
             @RequestParam(value = "images", required = false) List<MultipartFile> images
     ) {
         Path tempJson = null;
@@ -166,9 +172,14 @@ public class AutobiographyController {
             payload.put("questions", QUESTIONS);
             payload.put("transcriptions", objectMapper.readValue(transcriptionsJson, List.class));
             payload.put("followup_transcriptions", objectMapper.readValue(followupJson, List.class));
+            payload.put("free_text", freeText);
             payload.put("keywords", objectMapper.readValue(keywordsJson, List.class));
             payload.put("title", title);
             if (coverImagePath != null) payload.put("cover_image_path", coverImagePath);
+            if (!fontId.isEmpty()) {
+                fontRepository.findByFontId(fontId)
+                    .ifPresent(f -> payload.put("font_path", f.getTtfPath()));
+            }
 
             tempJson = Files.createTempFile("auto_generate_", ".json");
             Files.writeString(tempJson, objectMapper.writeValueAsString(payload), StandardCharsets.UTF_8);
@@ -184,14 +195,14 @@ public class AutobiographyController {
             String pdfPath = (String) result.get("pdf_path");
 
             // DB 저장 (user는 JWT 연동 후 팀원이 채워줄 것)
-            autobiographyRepository.save(new Autobiography(null, name, title, pdfPath));
+            Autobiography saved = autobiographyRepository.save(new Autobiography(null, name, title, pdfPath));
 
             // 다운로드 엔드포인트용 경로 갱신
             Files.createDirectories(Paths.get(autoDir, "output"));
             Files.writeString(Paths.get(autoDir, "output", "latest_pdf.txt"),
                 pdfPath, StandardCharsets.UTF_8);
 
-            return ResponseEntity.ok(Map.of("status", "success", "pdf_path", pdfPath));
+            return ResponseEntity.ok(Map.of("status", "success", "pdf_path", pdfPath, "id", saved.getId()));
 
         } catch (Exception e) {
             return ResponseEntity.internalServerError()
@@ -202,7 +213,53 @@ public class AutobiographyController {
         }
     }
 
-    // ── 4. PDF 다운로드 / 미리보기 ──────────────────────────────────────────────────
+    // ── 4. 자서전 목록 조회 ────────────────────────────────────────────────────────
+    @GetMapping("/list")
+    public ResponseEntity<List<Map<String, Object>>> list() {
+        List<Autobiography> all = autobiographyRepository.findAll();
+        all.sort((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()));
+        List<Map<String, Object>> result = all.stream().map(a -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", a.getId());
+            m.put("subjectName", a.getSubjectName());
+            m.put("title", a.getTitle());
+            m.put("createdAt", a.getCreatedAt());
+            return m;
+        }).collect(Collectors.toList());
+        return ResponseEntity.ok(result);
+    }
+
+    // ── 5. 자서전 삭제 ────────────────────────────────────────────────────────────
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable long id) {
+        if (!autobiographyRepository.existsById(id)) return ResponseEntity.notFound().build();
+        autobiographyRepository.deleteById(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // ── 6. 개별 PDF 다운로드 ───────────────────────────────────────────────────────
+    @GetMapping("/download/{id}")
+    public ResponseEntity<Resource> downloadById(
+            @PathVariable long id,
+            @RequestParam(value = "inline", defaultValue = "false") boolean inline
+    ) {
+        Autobiography autobiography = autobiographyRepository.findById(id).orElse(null);
+        if (autobiography == null) return ResponseEntity.notFound().build();
+        try {
+            File pdfFile = new File(autobiography.getPdfPath());
+            if (!pdfFile.exists()) return ResponseEntity.notFound().build();
+            Resource resource = new UrlResource(pdfFile.toURI());
+            String disposition = inline ? "inline" : "attachment; filename=\"autobiography.pdf\"";
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
+                    .body(resource);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    // ── 6. PDF 다운로드 / 미리보기 ──────────────────────────────────────────────────
     @GetMapping("/download")
     public ResponseEntity<Resource> download(
             @RequestParam(value = "inline", defaultValue = "false") boolean inline
