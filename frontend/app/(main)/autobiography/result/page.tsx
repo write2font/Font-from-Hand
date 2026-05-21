@@ -1,14 +1,130 @@
 "use client";
 
-import { Check, Download, ArrowLeft } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Check, Download, ArrowLeft, Star } from "lucide-react";
 import Link from "next/link";
 import PageHeader from "@/components/ui/PageHeader";
 import StepItem from "@/components/ui/StepItem";
 import Button from "@/components/ui/Button";
 
+const SURVEY_QUESTIONS = [
+  "내 이야기가 정확하게 담겼나요?",
+  "글이 자연스럽게 읽히나요?",
+  "AI가 내 감정과 경험을 잘 표현했나요?",
+  "챕터 간 내용이 자연스럽게 이어지나요?",
+  "이 자서전을 소중한 분께 선물하고 싶으신가요?",
+];
+
+function SurveyForm() {
+  const [ratings, setRatings]   = useState<number[]>(Array(SURVEY_QUESTIONS.length).fill(0));
+  const [freeText, setFreeText] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    try {
+      const autoId = sessionStorage.getItem("autobiography_id");
+      if (autoId) {
+        await fetch(`http://localhost:8080/api/v1/autobiography/${autoId}/survey`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ratings, freeText }),
+        });
+      }
+    } catch {
+      // 저장 실패해도 감사 메시지는 표시
+    } finally {
+      setSubmitting(false);
+      setSubmitted(true);
+    }
+  };
+
+  if (submitted) return (
+    <div className="text-center py-8 text-emerald-600 font-medium">
+      소중한 의견 감사합니다!
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      {SURVEY_QUESTIONS.map((q, qi) => (
+        <div key={qi}>
+          <p className="text-sm text-gray-700 mb-2">{q}</p>
+          <div className="flex gap-1">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button key={star} onClick={() => {
+                setRatings((prev) => { const next = [...prev]; next[qi] = star; return next; });
+              }}>
+                <Star
+                  size={24}
+                  className={star <= ratings[qi] ? "text-yellow-400 fill-yellow-400" : "text-gray-200"}
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+      <div>
+        <p className="text-sm text-gray-700 mb-2">자유롭게 의견을 남겨주세요 (선택)</p>
+        <textarea
+          value={freeText}
+          onChange={(e) => setFreeText(e.target.value)}
+          placeholder="불편했던 점, 개선됐으면 하는 점, 좋았던 점 무엇이든 환영합니다."
+          rows={4}
+          className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm text-gray-700 resize-none focus:outline-none focus:ring-2 focus:ring-emerald-300"
+        />
+      </div>
+      <Button
+        onClick={handleSubmit}
+        disabled={ratings.some((r) => r === 0) || submitting}
+        className="mt-2"
+      >
+        {submitting ? "저장 중..." : "제출하기"}
+      </Button>
+    </div>
+  );
+}
+
 export default function AutobiographyResultPage() {
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(true);
+  const [pdfError, setPdfError] = useState(false);
+  const blobUrlRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const autoId = sessionStorage.getItem("autobiography_id");
+    const url = autoId
+      ? `http://localhost:8080/api/v1/autobiography/download/${autoId}?inline=true`
+      : "http://localhost:8080/api/v1/autobiography/download?inline=true";
+    fetch(url, {
+      credentials: "include",
+    })
+      .then((r) => {
+        if (!r.ok) throw new Error("not ok");
+        return r.blob();
+      })
+      .then((blob) => {
+        const url = URL.createObjectURL(blob);
+        blobUrlRef.current = url;
+        setPdfBlobUrl(url);
+      })
+      .catch(() => setPdfError(true))
+      .finally(() => setPdfLoading(false));
+
+    return () => {
+      if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
+    };
+  }, []);
+
   const handleDownload = () => {
-    window.location.href = "http://localhost:8080/api/v1/autobiography/download";
+    if (pdfBlobUrl) {
+      const a = document.createElement("a");
+      a.href = pdfBlobUrl;
+      a.download = "autobiography.pdf";
+      a.click();
+    }
   };
 
   return (
@@ -41,12 +157,25 @@ export default function AutobiographyResultPage() {
 
         <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-gray-100 mb-8">
           <h3 className="text-lg font-bold mb-6">미리보기</h3>
-          <iframe
-            src="http://localhost:8080/api/v1/autobiography/download?inline=true"
-            className="w-full rounded-2xl border border-gray-100"
-            style={{ height: "600px" }}
-            title="자서전 미리보기"
-          />
+          {pdfLoading ? (
+            <div className="w-full flex items-center justify-center bg-gray-50 rounded-2xl border border-gray-100" style={{ height: "600px" }}>
+              <div className="flex flex-col items-center gap-3 text-gray-400">
+                <div className="w-8 h-8 border-2 border-gray-300 border-t-gray-500 rounded-full animate-spin" />
+                <span className="text-sm">PDF 불러오는 중...</span>
+              </div>
+            </div>
+          ) : pdfError || !pdfBlobUrl ? (
+            <div className="w-full flex items-center justify-center bg-gray-50 rounded-2xl border border-gray-100" style={{ height: "600px" }}>
+              <p className="text-sm text-gray-400">미리보기를 불러올 수 없습니다. 아래에서 다운로드해 주세요.</p>
+            </div>
+          ) : (
+            <iframe
+              src={pdfBlobUrl}
+              className="w-full rounded-2xl border border-gray-100"
+              style={{ height: "600px" }}
+              title="자서전 미리보기"
+            />
+          )}
         </div>
 
         <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-gray-100 mb-8">
@@ -55,6 +184,11 @@ export default function AutobiographyResultPage() {
             <Download size={20} />
             자서전 PDF 다운로드
           </Button>
+        </div>
+
+        <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-gray-100 mb-8">
+          <h3 className="text-lg font-bold mb-6">자서전 평가</h3>
+          <SurveyForm />
         </div>
 
         <Link href="/autobiography">

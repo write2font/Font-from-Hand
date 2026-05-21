@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Download, FileText, Pencil, Trash2, User } from "lucide-react";
+import { BookOpen, Download, FileText, Pencil, Trash2, User } from "lucide-react";
 import api, { authService } from "@/app/lib/axios";
 import PageHeader from "@/components/ui/PageHeader";
 import Button from "@/components/ui/Button";
@@ -19,10 +19,18 @@ interface Font {
   createdAt: string;
 }
 
+interface AutobiographyItem {
+  id: number;
+  subjectName: string;
+  title: string;
+  createdAt: string;
+}
+
 export default function MyPage() {
   const router = useRouter();
   const [user, setUser] = useState<UserInfo | null>(null);
   const [fonts, setFonts] = useState<Font[]>([]);
+  const [autobiographies, setAutobiographies] = useState<AutobiographyItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [isEditingName, setIsEditingName] = useState(false);
@@ -30,6 +38,7 @@ export default function MyPage() {
   const [nameLoading, setNameLoading] = useState(false);
 
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [autoDeleteLoading, setAutoDeleteLoading] = useState(false);
 
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [withdrawLoading, setWithdrawLoading] = useState(false);
@@ -37,12 +46,14 @@ export default function MyPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [userData, fontsData] = await Promise.all([
+        const [userData, fontsData, autoData] = await Promise.all([
           authService.getMe(),
           api.get("/fonts/list").then((r) => r.data),
+          api.get("/autobiography/list").then((r) => r.data).catch(() => []),
         ]);
         setUser(userData);
         setFonts(fontsData);
+        setAutobiographies(autoData);
       } catch (error: any) {
         if (error.response?.status === 401) {
           router.push("/sign-in");
@@ -101,6 +112,19 @@ export default function MyPage() {
       alert("폰트 삭제 중 오류가 발생했습니다.");
     } finally {
       setDeleteLoading(false);
+    }
+  };
+
+  const handleDeleteAutobiography = async (id: number) => {
+    if (!window.confirm("자서전을 삭제할까요? 삭제한 자서전은 복구할 수 없어요.")) return;
+    setAutoDeleteLoading(true);
+    try {
+      await api.delete(`/autobiography/${id}`);
+      setAutobiographies((prev) => prev.filter((a) => a.id !== id));
+    } catch {
+      alert("자서전 삭제 중 오류가 발생했습니다.");
+    } finally {
+      setAutoDeleteLoading(false);
     }
   };
 
@@ -222,6 +246,56 @@ export default function MyPage() {
                     <button
                       onClick={() => handleDeleteFont(font.fontId)}
                       disabled={deleteLoading}
+                      className="p-2 text-gray-300 hover:text-red-400 hover:bg-red-50 rounded-xl transition disabled:opacity-50"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* 자서전 목록 */}
+        <section className="mb-10">
+          <h2 className="text-base font-bold mb-6 flex items-center gap-2">
+            <BookOpen size={18} className="text-brand-500" />
+            내 자서전 목록
+          </h2>
+
+          {autobiographies.length === 0 ? (
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-16 text-center">
+              <p className="text-gray-400 mb-6">아직 만든 자서전이 없어요.</p>
+              <Button onClick={() => router.push("/autobiography")}>자서전 만들러 가기</Button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {autobiographies.map((auto) => (
+                <div
+                  key={auto.id}
+                  className="bg-white rounded-2xl border border-gray-100 shadow-sm px-8 py-6 flex items-center justify-between"
+                >
+                  <div>
+                    <p className="text-base font-bold text-gray-800">
+                      {auto.title || `${auto.subjectName}의 자서전`}
+                    </p>
+                    <p className="text-sm text-gray-400 mt-1">
+                      {auto.subjectName} • {new Date(auto.createdAt).toLocaleDateString("ko-KR")}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Button
+                      size="sm"
+                      onClick={() => window.open(`http://localhost:8080/api/v1/autobiography/download/${auto.id}`, "_blank")}
+                      className="flex items-center gap-2"
+                    >
+                      <Download size={14} />
+                      PDF 다운로드
+                    </Button>
+                    <button
+                      onClick={() => handleDeleteAutobiography(auto.id)}
+                      disabled={autoDeleteLoading}
                       className="p-2 text-gray-300 hover:text-red-400 hover:bg-red-50 rounded-xl transition disabled:opacity-50"
                     >
                       <Trash2 size={16} />
