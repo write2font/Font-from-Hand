@@ -12,6 +12,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -24,7 +26,7 @@ public class FontService {
     private final JwtProvider jwtProvider;
 
     @Transactional
-    public String uploadFont(List<MultipartFile> files, String token, String fontName, Font.FontType type) throws Exception {
+    public String uploadFont(List<MultipartFile> files, String token, String fontName, Font.FontType type, boolean drawMode) throws Exception {
         User user = getUserFromToken(token);
 
         String fontId = UUID.randomUUID().toString();
@@ -36,7 +38,7 @@ public class FontService {
         String pythonScriptPath = Paths.get(baseDir, "..", "font-engine", "main.py").normalize().toString();
         String outputTtfPath = Paths.get(uploadPath, fontName + ".ttf").toString();
 
-        boolean success = runPythonEngine(pythonScriptPath, uploadPath, outputTtfPath);
+        boolean success = runPythonEngine(pythonScriptPath, uploadPath, outputTtfPath, drawMode);
         if (!success) {
             throw new RuntimeException("파이썬 폰트 생성 중 에러 발생");
         }
@@ -126,9 +128,13 @@ public class FontService {
         }
     }
 
-    private boolean runPythonEngine(String scriptPath, String inputDir, String outputTtfPath) {
+    private boolean runPythonEngine(String scriptPath, String inputDir, String outputTtfPath, boolean drawMode) {
         try {
-            ProcessBuilder pb = new ProcessBuilder("python3", "-u", scriptPath, inputDir, outputTtfPath);
+            List<String> cmd = new ArrayList<>(Arrays.asList("python3", "-u", scriptPath, inputDir, outputTtfPath));
+            if (drawMode) {
+                cmd.addAll(Arrays.asList("--rows", "1", "--cols", "1"));
+            }
+            ProcessBuilder pb = new ProcessBuilder(cmd);
             pb.redirectErrorStream(true);
             Process process = pb.start();
 
