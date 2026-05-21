@@ -41,12 +41,12 @@ class ImageGenerator:
         print("[이미지] 충남대 Gateway로 이미지 생성 중... (10~30초)")
         return self._call_gateway(prompt, output_path)
 
-    # 손으로 그린 느낌을 살리는 스타일만 사용 (AI 티 최소화)
+    # 따뜻하고 서정적인 스타일 (수묵화·판화 제외)
     _STYLES = [
-        ("korean_ink", "Korean ink wash painting on hanji paper, minimalist brushwork, misty atmosphere, subtle ink gradients, traditional East Asian art"),
-        ("pencil_watercolor", "hand-drawn pencil sketch with loose watercolor washes, visible pencil lines, imperfect organic feel, sketchbook style"),
-        ("woodblock", "Korean woodblock print style, bold outlines, limited earthy colors, folk art texture, handmade feel"),
-        ("gouache_folk", "Korean folk painting style, flat warm earthy tones, naive art, handcrafted illustration, minhwa inspired"),
+        ("watercolor", "soft watercolor illustration, warm pastel tones, gentle washes of color, dreamy and nostalgic mood, artistic book cover"),
+        ("pencil_watercolor", "hand-drawn pencil sketch with loose watercolor washes, warm tones, imperfect organic feel, cozy sketchbook style"),
+        ("gouache", "gouache illustration, warm earthy tones, painterly texture, soft light, nostalgic and heartfelt mood, book cover art"),
+        ("oil_pastel", "oil pastel illustration, rich warm colors, textured strokes, soft glowing light, intimate and personal mood"),
     ]
 
     def _make_prompt(self, keywords, summary_text, cover_title=None) -> str:

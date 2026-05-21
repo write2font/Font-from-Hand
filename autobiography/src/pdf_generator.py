@@ -52,12 +52,15 @@ class PDFGenerator:
         self.output_dir = os.path.join(config.OUTPUT_DIR, user_id)
         os.makedirs(self.output_dir, exist_ok=True)
 
-    def generate(self, autobiography: dict, cover_image_path: str = None) -> str:
+    def generate(self, autobiography: dict, cover_image_path: str = None,
+                 chapter_images: dict = None) -> str:
         user_name  = autobiography.get("user_name", "저자")
         chapters   = autobiography.get("chapters", [])
         persona    = autobiography.get("persona",  "Adult")
         age        = autobiography.get("age",       0)
         birth_year = autobiography.get("birth_year", str(datetime.now().year - age))
+        hometown   = autobiography.get("hometown",  "")
+        chapter_images = chapter_images or {}
 
         pdf = AutobiographyPDF(font_name=self.font_info["font_name"], user_name=user_name)
         self._register_font(pdf)
@@ -68,12 +71,14 @@ class PDFGenerator:
 
         # 2. 목차
         pdf.add_page()
-        self._draw_toc(pdf, chapters)
+        self._draw_toc(pdf, chapters, user_name=user_name, birth_year=birth_year,
+                       age=age, hometown=hometown)
 
         # 3. 챕터 본문
-        for chapter in chapters:
+        for i, chapter in enumerate(chapters):
             pdf.add_page()
-            self._draw_chapter(pdf, chapter["title"], chapter["content"])
+            self._draw_chapter(pdf, chapter["title"], chapter["content"],
+                               chapter_num=i + 1, image_path=chapter_images.get(i))
 
         output_path = os.path.join(
             self.output_dir,
@@ -146,11 +151,6 @@ class PDFGenerator:
             pdf.multi_cell(0, 10, cover_title, align="C")
             pdf.ln(4)
 
-            # 구분선 (밝은 색)
-            pdf.set_draw_color(200, 180, 150)
-            pdf.set_line_width(0.4)
-            pdf.line(m + 10, pdf.get_y(), pdf.w - m - 10, pdf.get_y())
-
         else:
             # 이미지 없을 때: 따뜻한 단색 배경
             pdf.set_fill_color(245, 240, 230)
@@ -173,63 +173,111 @@ class PDFGenerator:
 
         pdf.set_text_color(0, 0, 0)
 
-    def _draw_toc(self, pdf, chapters):
-        m = config.PDF_MARGIN_MM
-        pdf.set_y(m + 3)
-        pdf.set_font(self.font_info["font_name"], size=14)
-        pdf.cell(0, 10, "목  차", align="C")
-        pdf.ln(10)
-        pdf.set_draw_color(120, 120, 120)
-        pdf.line(m, pdf.get_y(), pdf.w - m, pdf.get_y())
-        pdf.ln(8)
-
-        pdf.set_font(self.font_info["font_name"], size=10)
+    def _draw_toc(self, pdf, chapters, user_name="", birth_year="", age=0, hometown=""):
         import re as _re
-        row_h = 10
+        m = config.PDF_MARGIN_MM
+        pdf.set_y(m + 5)
+
+        pdf.set_font(self.font_info["font_name"], size=12)
+        pdf.set_text_color(60, 50, 40)
+        pdf.cell(0, 10, "목  차", align="C")
+        pdf.ln(8)
+        pdf.set_draw_color(160, 140, 110)
+        pdf.set_line_width(0.4)
+        pdf.line(m, pdf.get_y(), pdf.w - m, pdf.get_y())
+        pdf.ln(7)
+
+        pdf.set_font(self.font_info["font_name"], size=9)
+        pdf.set_text_color(40, 35, 30)
+        row_h = 9
+        usable_w = pdf.w - 2 * m
+        num_w = 6
+
         for idx, chapter in enumerate(chapters, 1):
             title = _re.sub(r"\*+", "", chapter["title"]).strip()
-            pdf.cell(8, row_h, f"{idx}.", align="R")
-            pdf.cell(0, row_h, f"  {title}", align="L")
+            pdf.set_x(m)
+            pdf.cell(num_w, row_h, f"{idx}", align="R")
+            pdf.set_x(m + num_w + 2)
+            pdf.cell(usable_w - num_w - 2, row_h, title, align="L")
             pdf.ln(row_h)
+        pdf.set_text_color(0, 0, 0)
 
-    def _draw_chapter(self, pdf, title, content):
+    def _draw_chapter(self, pdf, title, content, chapter_num=None, image_path=None):
         import re as _re
         m = config.PDF_MARGIN_MM
-        pdf.set_y(m + 8)
+        pdf.set_y(m + 10)
 
-        # 챕터 제목 (마크다운 제거)
         clean_title = _re.sub(r"\*+", "", title).strip()
-        pdf.set_font(self.font_info["font_name"], size=18)
-        pdf.set_text_color(20, 20, 20)
-        pdf.multi_cell(0, 11, clean_title, align="L")
-        pdf.ln(4)
+        pdf.set_font(self.font_info["font_name"], size=config.PDF_TITLE_FONT_SIZE)
+        pdf.set_text_color(30, 22, 14)
+        pdf.multi_cell(0, 9, clean_title, align="L")
+        pdf.ln(8)
 
-        # 본문 첫 줄이 제목과 같으면 제거
-        content_lines = content.strip().split("\n")
-        while content_lines:
-            first = _re.sub(r"\*+|\s+", "", content_lines[0])
-            ttl   = _re.sub(r"\s+", "", clean_title)
-            if first == ttl or first.startswith(ttl):
-                content_lines.pop(0)
-            else:
-                break
-        content = "\n".join(content_lines).strip()
+        content = content.strip()
 
-        # 구분선
-        pdf.set_draw_color(80, 80, 80)
-        pdf.line(m, pdf.get_y(), m + 35, pdf.get_y())
-        pdf.ln(10)
+        # 챕터 이미지 (있을 때만)
+        if image_path and os.path.exists(image_path):
+            try:
+                import tempfile
+                from PIL import Image as PILImage, ExifTags
+
+                pil_img = PILImage.open(image_path)
+
+                # EXIF 회전 자동 보정 (폰 카메라 사진)
+                try:
+                    exif = pil_img._getexif()
+                    if exif:
+                        orient_key = next(
+                            k for k, v in ExifTags.TAGS.items() if v == "Orientation"
+                        )
+                        orientation = exif.get(orient_key)
+                        rotation_map = {3: 180, 6: 270, 8: 90}
+                        if orientation in rotation_map:
+                            pil_img = pil_img.rotate(
+                                rotation_map[orientation], expand=True
+                            )
+                except Exception:
+                    pass
+
+                orig_w, orig_h = pil_img.size
+                max_img_w = pdf.w - 2 * m
+                img_h = max_img_w * orig_h / orig_w
+
+                # 페이지 남은 공간보다 크면 축소
+                max_h = pdf.h - pdf.get_y() - m - 15
+                if img_h > max_h:
+                    img_h = max_h
+                    max_img_w = img_h * orig_w / orig_h
+
+                # EXIF 보정된 임시 파일로 저장
+                with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
+                    tmp_path = tmp.name
+                pil_img.convert("RGB").save(tmp_path, "JPEG", quality=85)
+
+                pdf.image(tmp_path, x=m, y=pdf.get_y(), w=max_img_w, h=img_h)
+                pdf.ln(img_h + 8)
+
+                try:
+                    os.unlink(tmp_path)
+                except Exception:
+                    pass
+
+            except Exception as e:
+                print(f"[PDF] 챕터 이미지 삽입 실패: {e}")
 
         # 본문 (줄간격 넉넉하게)
         pdf.set_font(self.font_info["font_name"], size=config.PDF_BODY_FONT_SIZE)
         pdf.set_text_color(30, 30, 30)
         effective_width = pdf.w - 2 * m
         line_h = config.PDF_LINE_HEIGHT
-        try:
-            # FPDF2 - 한국어 음절 단위 줄바꿈 (오른쪽 공백 방지)
-            pdf.multi_cell(effective_width, line_h, content, align="L", wrapmode="CHAR")
-        except TypeError:
-            pdf.multi_cell(effective_width, line_h, content, align="L")
+        paragraphs = [p.strip() for p in _re.split(r'\n+', content) if p.strip()]
+        for i_p, para in enumerate(paragraphs):
+            try:
+                pdf.multi_cell(effective_width, line_h, para, align="L", wrapmode="CHAR")
+            except TypeError:
+                pdf.multi_cell(effective_width, line_h, para, align="L")
+            if i_p < len(paragraphs) - 1:
+                pdf.ln(2)
 
 
 if __name__ == "__main__":

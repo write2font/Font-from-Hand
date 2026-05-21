@@ -6,7 +6,7 @@ import { Mic, Square, Play, Pause, Upload, X, BookOpen, Mic2, FileText, Sparkles
 import axios from "axios";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
-type Step = "intro" | "info" | "image" | "questions" | "followup" | "keyword" | "title" | "generating";
+type Step = "intro" | "info" | "image" | "questions" | "followup" | "keyword" | "generating";
 
 interface RecordingState {
   status: "idle" | "recording" | "done";
@@ -30,44 +30,81 @@ interface FreeEntry {
 
 // ── Question Sets ──────────────────────────────────────────────────────────────
 const QUESTIONS_20S: Question[] = [
-  { num: 1, category: "유년의 풍경",    text: "어릴 때 가장 자주 가셨던 장소가 어디셨나요? 그곳이 왜 좋으셨나요?" },
-  { num: 2, category: "유년의 맛",      text: "어릴 때 집에서 자주 드시던 음식이나 냄새 중 지금도 기억에 남는 것이 있으신가요?" },
-  { num: 3, category: "학교 생활",      text: "학창 시절 공부 외에 가장 열정적으로 하셨던 것이 무엇인가요?" },
-  { num: 4, category: "첫 만남",        text: "지금 가장 친하게 지내는 사람을 처음 만났던 순간이 기억나시나요?" },
-  { num: 5, category: "어린 시절의 꿈", text: "어릴 때 어떤 사람이 되고 싶으셨나요? 지금의 모습과 어떻게 연결되나요?" },
-  { num: 6, category: "고생의 기억",    text: "지금까지 무언가를 위해 정말 고생하거나 밤새워 매달리셨던 경험이 있으신가요?" },
-  { num: 7, category: "빛나는 순간",    text: "주변 사람에게 자랑하고 싶었던 순간이 있으신가요?" },
-  { num: 8, category: "닮고 싶은 분",   text: "지금 가장 닮고 싶은 분이 계신가요? 어떤 점이 그러신가요?" },
-  { num: 9, category: "미래의 나",      text: "10년 뒤, 어떤 모습이면 좋겠다고 생각하시나요?" },
+  { num: 1, category: "어린 날의 장소",        text: "어릴 때 가장 자주 가셨던 장소가 어디셨나요? 그곳이 왜 좋으셨나요?" },
+  { num: 2, category: "유년의 맛",              text: "어릴 때 집에서 자주 드시던 음식이나 냄새 중 지금도 기억에 남는 것이 있으신가요?" },
+  { num: 3, category: "학교 생활",              text: "학창 시절 공부 외에 가장 열정적으로 하셨던 것이 무엇인가요?" },
+  { num: 4, category: "오래된 인연",            text: "지금 가장 친하게 지내는 사람을 처음 만났던 순간이 기억나시나요?" },
+  { num: 5, category: "어린 시절의 꿈",         text: "어릴 때 어떤 사람이 되고 싶으셨나요? 지금의 모습과 어떻게 연결되나요?" },
+  { num: 6, category: "버티던 시절",            text: "지금까지 무언가를 위해 정말 고생하거나 밤새워 매달리셨던 경험이 있으신가요?" },
+  { num: 7, category: "내가 제일 빛났을 때",    text: "주변 사람에게 자랑하고 싶었던 순간이 있으신가요?" },
+  { num: 8, category: "나에게 영향을 준 사람",  text: "지금까지 살면서 나에게 가장 큰 영향을 준 사람은 누구인가요? 어떤 영향을 받으셨나요?" },
+  { num: 9, category: "앞으로의 나",            text: "10년 뒤, 어떤 모습이면 좋겠다고 생각하시나요?" },
 ];
 
 const QUESTIONS_3040S: Question[] = [
-  { num: 1,  category: "유년의 풍경",  text: "어릴 때 가장 기억에 남는 장소나 풍경이 있으신가요?" },
-  { num: 2,  category: "학교 생활",    text: "학창 시절 가장 열정적으로 하셨던 것이 무엇인가요?" },
-  { num: 3,  category: "첫 도전",      text: "20대에 처음으로 혼자서 해내셨던 일이 기억나시나요?" },
-  { num: 4,  category: "소중한 인연",  text: "가장 오래 함께하신 동료나 친구가 계신가요? 어떻게 친해지셨나요?" },
-  { num: 5,  category: "삶의 전환점",  text: "지금과 전혀 다른 길을 갈 뻔했던 순간이 있으신가요?" },
-  { num: 6,  category: "만약에",       text: "만약 그 선택을 하지 않으셨다면, 지금은 어떤 모습일 것 같으세요?", conditionalOn: 4 },
-  { num: 7,  category: "고생의 기억",  text: "일이나 삶에서 가장 고되고 버거우셨던 시기는 언제였나요? 어떻게 버티셨나요?" },
-  { num: 8,  category: "빛나는 순간",  text: "일이나 생활에서 가장 뿌듯하셨던 순간은 언제인가요?" },
-  { num: 9,  category: "가족과 함께",  text: "가족과 함께 가장 기억에 남는 순간이 있으신가요?" },
-  { num: 10, category: "인생 철학",    text: "살면서 꼭 지키려 하셨던 원칙이 있으신가요?" },
-  { num: 11, category: "앞으로의 꿈",  text: "앞으로 가장 해보고 싶으신 것이 있으신가요?" },
+  { num: 1,  category: "어린 날의 장소",      text: "어릴 때 가장 기억에 남는 장소나 풍경이 있으신가요?" },
+  { num: 2,  category: "학교 생활",            text: "학창 시절 가장 열정적으로 하셨던 것이 무엇인가요?" },
+  { num: 3,  category: "첫 도전",              text: "20대에 처음으로 혼자서 해내셨던 일이 기억나시나요?" },
+  { num: 4,  category: "소중한 인연",          text: "가장 오래 함께하신 동료나 친구가 계신가요? 어떻게 친해지셨나요?" },
+  { num: 5,  category: "삶의 전환점",          text: "지금과 전혀 다른 길을 갈 뻔했던 순간이 있으신가요?" },
+  { num: 6,  category: "만약에",               text: "만약 그 선택을 하지 않으셨다면, 지금은 어떤 모습일 것 같으세요?", conditionalOn: 4 },
+  { num: 7,  category: "버티던 시절",          text: "일이나 삶에서 가장 고되고 버거우셨던 시기는 언제였나요? 어떻게 버티셨나요?" },
+  { num: 8,  category: "내가 제일 빛났을 때",  text: "일이나 생활에서 가장 뿌듯하셨던 순간은 언제인가요?" },
+  { num: 9,  category: "가족과 함께",          text: "가족과 함께 가장 기억에 남는 순간이 있으신가요?" },
+  { num: 10, category: "인생 철학",            text: "살면서 꼭 지키려 하셨던 원칙이 있으신가요?" },
+  { num: 11, category: "앞으로의 꿈",          text: "앞으로 가장 해보고 싶으신 것이 있으신가요?" },
 ];
 
-const QUESTIONS_50PLUS: Question[] = [
-  { num: 1,  category: "고향의 기억",  text: "고향이 어디이신가요? 어릴 때 고향의 풍경이나 냄새 중 지금도 기억에 남는 것이 있으신가요?" },
-  { num: 2,  category: "유년의 맛",    text: "어릴 때 집에서 자주 드시던 음식이 무엇인가요? 그 맛이 아직도 기억나시나요?" },
-  { num: 3,  category: "아끼던 것",    text: "어린 시절 가장 아끼셨던 물건이나 장소가 있으신가요?" },
-  { num: 4,  category: "학교 생활",    text: "학창 시절 가장 좋아하셨던 과목이나 활동이 있으신가요?" },
-  { num: 5,  category: "첫 사회생활",  text: "처음 사회에 나오셨을 때가 기억나시나요? 어떤 일을 하셨나요?" },
-  { num: 6,  category: "고생의 기억",  text: "그 시절, 가장 고생하거나 버티기 어려우셨던 순간이 있으신가요?" },
-  { num: 7,  category: "소중한 인연",  text: "살면서 꼭 한 번 고맙다고 전하고 싶은 분이 계신가요? 그분은 어떤 분이셨나요?" },
-  { num: 8,  category: "빛나는 성취",  text: "인생에서 가장 잘하셨다고 생각하시는 일을 하나 꼽아주실 수 있으신가요?" },
-  { num: 9,  category: "만약에",       text: "만약 그 선택을 하지 않으셨다면, 지금의 삶이 어떻게 달랐을 것 같으세요?", conditionalOn: 7 },
-  { num: 10, category: "인생 철학",    text: "평생 지켜오신 나만의 원칙이나 좌우명이 있으신가요?" },
-  { num: 11, category: "젊은이에게",   text: "지금 젊은 분들에게 꼭 하고 싶으신 말씀이 있으신가요?" },
+const QUESTIONS_5060S: Question[] = [
+  { num: 1,  category: "어린 날의 장소",      text: "어릴 때 가장 자주 가셨던 장소가 어디인가요? 그곳이 왜 기억에 남으시나요?" },
+  { num: 2,  category: "유년의 맛",            text: "어릴 때 집에서 자주 드시던 음식 중 지금도 생각나는 게 있으신가요?" },
+  { num: 3,  category: "학교 생활",            text: "학창 시절 가장 열정적으로 하셨던 것이 무엇인가요?" },
+  { num: 4,  category: "첫 사회생활",          text: "처음 사회에 나오셨을 때 어떤 일을 하셨나요? 그때 기억이 나시나요?" },
+  { num: 5,  category: "오래된 인연",          text: "지금까지 가장 오래 함께한 친구나 동료가 계신가요? 어떻게 인연이 되셨나요?" },
+  { num: 6,  category: "삶의 전환점",          text: "지금과 전혀 다른 길을 갈 뻔했던 순간이 있으신가요?" },
+  { num: 7,  category: "만약에",               text: "만약 그 선택을 하지 않으셨다면 지금은 어떤 모습일 것 같으세요?", conditionalOn: 5 },
+  { num: 8,  category: "버티던 시절",          text: "가장 고되고 버티기 힘드셨던 시기가 언제였나요? 어떻게 견디셨나요?" },
+  { num: 9,  category: "내가 제일 빛났을 때",  text: "일이나 삶에서 가장 뿌듯하셨던 순간을 하나 꼽아주실 수 있으신가요?" },
+  { num: 10, category: "인생 철학",            text: "살면서 꼭 지키려 하셨던 원칙이 있으신가요?" },
+  { num: 11, category: "앞으로의 나",          text: "앞으로 가장 해보고 싶으신 것이 있으신가요?" },
 ];
+
+const QUESTIONS_70PLUS: Question[] = [
+  { num: 1,  category: "고향의 기억",          text: "고향이 어디이신가요? 어릴 때 고향의 풍경이나 냄새 중 지금도 기억에 남는 것이 있으신가요?" },
+  { num: 2,  category: "유년의 맛",            text: "어릴 때 집에서 자주 드시던 음식이 무엇인가요? 그 맛이 아직도 기억나시나요?" },
+  { num: 3,  category: "아끼던 것",            text: "어린 시절 가장 아끼셨던 물건이나 장소가 있으신가요?" },
+  { num: 4,  category: "학교 생활",            text: "학창 시절 가장 좋아하셨던 과목이나 활동이 있으신가요?" },
+  { num: 5,  category: "첫 사회생활",          text: "처음 사회에 나오셨을 때가 기억나시나요? 어떤 일을 하셨나요?" },
+  { num: 6,  category: "버티던 시절",          text: "그 시절 가장 고생하거나 버티기 어려우셨던 순간이 있으신가요?" },
+  { num: 7,  category: "오래된 인연",          text: "살면서 꼭 한 번 고맙다고 전하고 싶은 분이 계신가요? 그분은 어떤 분이셨나요?" },
+  { num: 8,  category: "내가 제일 빛났을 때",  text: "인생에서 가장 잘하셨다고 생각하시는 일을 하나 꼽아주실 수 있으신가요?" },
+  { num: 9,  category: "만약에",               text: "만약 그 선택을 하지 않으셨다면 지금의 삶이 어떻게 달랐을 것 같으세요?", conditionalOn: 7 },
+  { num: 10, category: "인생 철학",            text: "평생 지켜오신 나만의 원칙이나 좌우명이 있으신가요?" },
+  { num: 11, category: "젊은이에게",           text: "지금 젊은 분들에게 꼭 하고 싶으신 말씀이 있으신가요?" },
+];
+
+const QUESTION_HINTS: Record<string, string> = {
+  "어린 날의 장소":        "예: 동네 뒷산 약수터였어요. 초등학교 때 친구들이랑 매일 거기서 놀았는데, 바위에 앉아 도시락 먹던 기억이 아직도 선해요. 친구 이름이나 그때 무엇을 했는지도 이야기해 주세요.",
+  "고향의 기억":           "예: 경북 안동이요. 하회마을 근처 논 냄새, 여름에 모깃불 피우던 기억이 나요. 마당에 평상 놓고 수박 먹던 것도요. 고향의 어떤 장면이 가장 먼저 떠오르시나요?",
+  "유년의 맛":             "예: 어머니가 겨울마다 끓여주시던 팥죽이요. 그 냄새가 나면 겨울이 왔다고 느꼈어요. 어떤 음식인지, 누가 만들어 줬는지, 어떤 맛이었는지 구체적으로 말씀해 주세요.",
+  "아끼던 것":             "예: 할아버지한테 물려받은 작은 칼이요. 공책에 싸서 늘 가지고 다녔어요. 왜 그게 소중했는지, 지금도 갖고 있는지도 이야기해 주세요.",
+  "학교 생활":             "예: 합창부였어요. 매일 방과 후 한 시간씩 연습했고, 3학년 때 전국대회에서 금상 받았을 때 선생님이 우셨어요. 어떤 활동을 했는지, 기억에 남는 순간도 함께 말씀해 주세요.",
+  "어린 시절의 꿈":        "예: 의사가 되고 싶었어요. 드라마 속 의사가 멋있어 보여서요. 지금은 완전 다른 일을 하지만, 그 꿈이 언제 바뀌었는지도 기억나시면 말씀해 주세요.",
+  "첫 사회생활":           "예: 공장 경리로 첫 출근한 날이요. 교복 입다가 처음으로 정장 입었는데 너무 어색했어요. 몇 살 때였는지, 어떤 일을 했는지, 첫날 어땠는지 이야기해 주세요.",
+  "첫 도전":               "예: 처음으로 혼자 서울 올라가서 면접 본 날이요. 기차표 살 때 손이 떨렸어요. 왜 그 도전을 했는지, 결과가 어땠는지도 말씀해 주세요.",
+  "오래된 인연":           "예: 중학교 입학날 옆자리에 앉았던 친구예요. 처음 말을 걸었던 계기가 뭔지, 지금도 연락하는지, 어떤 추억이 있는지 이야기해 주세요.",
+  "소중한 인연":           "예: 입사 첫날 밥 사줬던 선배예요. 그분이 어떤 분이었는지, 어떻게 친해졌는지, 함께한 기억 중 하나를 골라 이야기해 주세요.",
+  "삶의 전환점":           "예: 30살에 회사 그만두고 가게 차렸을 때요. 가족들이 다 반대했는데 결국 했어요. 왜 그 선택을 했는지, 그 후 어떻게 됐는지 말씀해 주세요.",
+  "만약에":                "예: 그때 그냥 회사 다녔으면 지금쯤 팀장은 됐겠죠. 근데 후회는 없어요. 지금 생각으로 그 선택이 맞았다고 보시는지도 이야기해 주세요.",
+  "버티던 시절":           "예: 셋째 낳고 일까지 병행하던 3년이요. 잠을 4시간도 못 잔 것 같아요. 어떻게 견디셨는지, 그때 힘이 됐던 것이 있었는지도 말씀해 주세요.",
+  "내가 제일 빛났을 때":   "예: 팀장 됐을 때요. 아무도 안 믿어줬는데 제가 직접 설득해서 만든 프로젝트였거든요. 그 순간이 왜 특별했는지, 어떤 기분이었는지 이야기해 주세요.",
+  "나에게 영향을 준 사람": "예: 고등학교 3학년 담임 선생님이요. 포기하려던 저한테 '넌 할 수 있다'고 하셨는데, 그 말이 지금도 생각나요. 어떤 영향을 받으셨는지 구체적으로 말씀해 주세요.",
+  "가족과 함께":           "예: 첫째 돌잔치 날이요. 온 가족이 다 모였고, 아이가 실을 잡았어요. 그 자리에 누가 있었는지, 어떤 분위기였는지도 이야기해 주세요.",
+  "인생 철학":             "예: '남한테 폐 끼치지 말자'는 게 신조예요. 어머니한테 들은 말인데 평생 지키고 있어요. 그 원칙이 언제부터였는지, 지키기 어려웠던 순간도 있었나요?",
+  "앞으로의 나":           "예: 매일 새벽 수영 다니고, 여행 한 달에 한 번씩 다니고 싶어요. 10년 뒤 어떤 모습이면 좋을지, 지금과 뭐가 달라지길 바라는지 이야기해 주세요.",
+  "앞으로의 꿈":           "예: 손자들 데리고 제주도 한 달 살기 해보고 싶어요. 꼭 해보고 싶은 것이 있으시면 왜 그게 하고 싶은지도 함께 말씀해 주세요.",
+  "젊은이에게":            "예: 지금 힘든 게 다 쌓여서 나중에 자랑거리가 돼요. 버티세요. 살면서 배운 것 중 가장 중요하다고 생각하는 것을 솔직하게 말씀해 주세요.",
+};
 
 function getQuestions(birthDate: string): Question[] {
   if (!birthDate) return QUESTIONS_3040S;
@@ -80,7 +117,8 @@ function getQuestions(birthDate: string): Question[] {
   ) age--;
   if (age < 30) return QUESTIONS_20S;
   if (age < 50) return QUESTIONS_3040S;
-  return QUESTIONS_50PLUS;
+  if (age < 70) return QUESTIONS_5060S;
+  return QUESTIONS_70PLUS;
 }
 
 function getPeriods(birthDate: string): string[] {
@@ -118,9 +156,11 @@ export default function AutobiographyPage() {
   const imageInputRef         = useRef<HTMLInputElement>(null);
 
   // Font selection
-  const [fontList, setFontList]           = useState<{fontId: string; fontName: string; type: string}[]>([]);
+  const [fontList, setFontList]             = useState<{fontId: string; fontName: string; type: string}[]>([]);
   const [selectedFontId, setSelectedFontId] = useState<string | null>(null);
-  const [fontsLoading, setFontsLoading]   = useState(false);
+  const [fontsLoading, setFontsLoading]     = useState(false);
+  const [localFontFile, setLocalFontFile]   = useState<File | null>(null);
+  const localFontInputRef                   = useRef<HTMLInputElement>(null);
 
   // Questions
   const [activeQuestions, setActiveQuestions] = useState<Question[]>(QUESTIONS_3040S);
@@ -472,16 +512,17 @@ export default function AutobiographyPage() {
 
   const goToTitle = () => {
     setTitleInput("");
-    setStep("title");
+    setStep("keyword");
   };
 
-  const generateTitle = async () => {
+  const generateTitle = async (keywords?: string[]) => {
     setTitleGenerating(true);
     try {
       const res = await axios.post("http://localhost:8080/api/v1/autobiography/suggest", {
         name, birth: birthDate,
         transcriptions,
         followup_transcriptions: followupTranscriptions,
+        selected_keywords: keywords ?? selectedKeywords,
       });
       setTitleInput(res.data.title ?? "");
     } catch {
@@ -503,12 +544,14 @@ export default function AutobiographyPage() {
       fd.append("name", name);
       fd.append("birth", birthDate);
       fd.append("hometown", hometown);
+      fd.append("questions", JSON.stringify(activeQuestions.map((q) => q.text)));
       fd.append("transcriptions", JSON.stringify(transcriptions));
       fd.append("followup_transcriptions", JSON.stringify(followupTranscriptions));
       fd.append("free_text", getFormattedFreeText());
       fd.append("keywords", JSON.stringify(selectedKeywords));
       fd.append("title", titleInput);
-      if (selectedFontId) fd.append("font_id", selectedFontId);
+      if (localFontFile) fd.append("font_file", localFontFile);
+      else if (selectedFontId) fd.append("font_id", selectedFontId);
       images.forEach((img) => fd.append("images", img));
 
       const res = await axios.post("http://localhost:8080/api/v1/autobiography/generate", fd);
@@ -592,6 +635,18 @@ export default function AutobiographyPage() {
           </div>
         )}
       </FieldCard>
+      <input
+        type="file"
+        accept=".ttf,.otf"
+        className="hidden"
+        ref={localFontInputRef}
+        onChange={(e) => {
+          const file = e.target.files?.[0] ?? null;
+          setLocalFontFile(file);
+          if (file) setSelectedFontId(null);
+          e.target.value = "";
+        }}
+      />
       <div className="bg-gray-100 rounded-2xl p-6 mb-4">
         <div className="flex items-center justify-between mb-3">
           <p className="text-sm font-bold text-gray-600">자서전에 사용할 폰트</p>
@@ -607,9 +662,9 @@ export default function AutobiographyPage() {
         ) : (
           <div className="space-y-2">
             <button
-              onClick={() => setSelectedFontId(null)}
+              onClick={() => { setSelectedFontId(null); setLocalFontFile(null); }}
               className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition ${
-                selectedFontId === null
+                selectedFontId === null && !localFontFile
                   ? "bg-brand-500 text-white"
                   : "bg-white text-gray-600 hover:bg-gray-50 border border-gray-200"
               }`}
@@ -619,7 +674,7 @@ export default function AutobiographyPage() {
             {fontList.map((f) => (
               <button
                 key={f.fontId}
-                onClick={() => setSelectedFontId(f.fontId)}
+                onClick={() => { setSelectedFontId(f.fontId); setLocalFontFile(null); }}
                 className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition ${
                   selectedFontId === f.fontId
                     ? "bg-brand-500 text-white"
@@ -632,6 +687,23 @@ export default function AutobiographyPage() {
                 </span>
               </button>
             ))}
+            {localFontFile ? (
+              <div className={`w-full px-4 py-3 rounded-xl text-sm font-medium bg-brand-500 text-white flex items-center justify-between`}>
+                <span className="truncate">{localFontFile.name}</span>
+                <button onClick={() => setLocalFontFile(null)} className="ml-2 text-brand-200 hover:text-white shrink-0">
+                  <X size={14} />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => localFontInputRef.current?.click()}
+                className="w-full text-left px-4 py-3 rounded-xl text-sm font-medium bg-white text-gray-600 hover:bg-gray-50 border border-dashed border-gray-300 hover:border-brand-300 transition flex items-center gap-2"
+              >
+                <Upload size={14} className="text-gray-400" />
+                내 컴퓨터에서 TTF/OTF 업로드
+              </button>
+            )}
+            <p className="text-xs text-gray-400 pt-1">업로드한 폰트의 저작권 및 사용 권한은 사용자 본인에게 있습니다.</p>
           </div>
         )}
       </div>
@@ -766,6 +838,7 @@ export default function AutobiographyPage() {
           onTogglePlay={toggleQPlay}
           onTranscriptChange={(v) => setTranscriptions((prev) => { const a = [...prev]; a[currentQIdx] = v; return a; })}
           onFileUpload={handleQFileUpload}
+          placeholder={QUESTION_HINTS[q.category]}
         />
 
         <div className="flex gap-3 mt-8">
@@ -855,73 +928,72 @@ export default function AutobiographyPage() {
           <span className="text-sm">키워드 분석 중...</span>
         </div>
       ) : (
-        <div className="flex flex-wrap gap-3 mb-10">
-          {keywordCandidates.map((kw) => {
-            const active = selectedKeywords.includes(kw);
-            return (
-              <button
-                key={kw}
-                onClick={() => {
-                  if (active) {
-                    setSelectedKeywords((p) => p.filter((k) => k !== kw));
-                  } else if (selectedKeywords.length < 3) {
-                    setSelectedKeywords((p) => [...p, kw]);
-                  }
-                }}
-                className={`px-5 py-2.5 rounded-full text-sm font-medium border transition ${
-                  active
-                    ? "bg-brand-500 text-white border-brand-500"
-                    : "bg-white text-gray-600 border-gray-200 hover:border-brand-300"
-                } ${!active && selectedKeywords.length >= 3 ? "opacity-40 cursor-not-allowed" : ""}`}
-              >
-                {kw}
-              </button>
-            );
-          })}
-        </div>
+        <>
+          <div className="flex flex-wrap gap-3 mb-8">
+            {keywordCandidates.map((kw) => {
+              const active = selectedKeywords.includes(kw);
+              return (
+                <button
+                  key={kw}
+                  onClick={() => {
+                    let next: string[];
+                    if (active) {
+                      next = selectedKeywords.filter((k) => k !== kw);
+                    } else if (selectedKeywords.length < 3) {
+                      next = [...selectedKeywords, kw];
+                    } else {
+                      return;
+                    }
+                    setSelectedKeywords(next);
+                    if (next.length >= 2) generateTitle(next);
+                  }}
+                  className={`px-5 py-2.5 rounded-full text-sm font-medium border transition ${
+                    active
+                      ? "bg-brand-500 text-white border-brand-500"
+                      : "bg-white text-gray-600 border-gray-200 hover:border-brand-300"
+                  } ${!active && selectedKeywords.length >= 3 ? "opacity-40 cursor-not-allowed" : ""}`}
+                >
+                  {kw}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="bg-gray-100 rounded-2xl p-6 mb-4">
+            <p className="text-sm font-bold text-gray-600 mb-3">자서전 제목</p>
+            {titleGenerating ? (
+              <div className="flex items-center gap-2 text-gray-400 text-sm">
+                <div className="w-4 h-4 border-2 border-gray-300 border-t-brand-500 rounded-full animate-spin" />
+                제목 생성 중...
+              </div>
+            ) : (
+              <input
+                type="text"
+                value={titleInput}
+                onChange={(e) => setTitleInput(e.target.value)}
+                placeholder="직접 입력하거나 키워드 2개 이상 선택 시 자동 생성돼요"
+                className="w-full bg-transparent outline-none text-gray-800 text-base placeholder-gray-300"
+              />
+            )}
+          </div>
+
+          {selectedKeywords.length >= 2 && (
+            <button
+              onClick={() => generateTitle()}
+              disabled={titleGenerating}
+              className="w-full py-4 rounded-2xl border border-brand-300 text-brand-500 font-bold hover:bg-brand-50 transition disabled:opacity-50 flex items-center justify-center gap-2 mb-6"
+            >
+              <Sparkles size={16} />
+              {titleGenerating ? "생성 중..." : "AI로 제목 다시 생성"}
+            </button>
+          )}
+        </>
       )}
       <div className="flex gap-3">
         <SecondaryButton className="flex-1" onClick={() => followupQuestions.length > 0 ? setStep("followup") : setStep("questions")}>
           이전
         </SecondaryButton>
-        <PrimaryButton className="flex-1" onClick={goToTitle} disabled={selectedKeywords.length < 2}>
-          다음 ({selectedKeywords.length}/3)
-        </PrimaryButton>
-      </div>
-    </PageShell>
-  );
-
-  if (step === "title") return (
-    <PageShell>
-      <StepIndicator step={step} />
-      <h1 className="text-2xl font-bold mb-8">자서전 제목</h1>
-
-      <div className="bg-gray-100 rounded-2xl p-6 mb-4">
-        <p className="text-sm font-bold text-gray-600 mb-3">제목</p>
-        <input
-          type="text"
-          value={titleInput}
-          onChange={(e) => setTitleInput(e.target.value)}
-          placeholder="자서전 제목을 입력해 주세요"
-          className="w-full bg-transparent outline-none text-gray-800 text-base placeholder-gray-300"
-          autoFocus
-        />
-      </div>
-
-      <button
-        onClick={generateTitle}
-        disabled={titleGenerating}
-        className="w-full py-4 rounded-2xl border border-brand-300 text-brand-500 font-bold hover:bg-brand-50 transition disabled:opacity-50 flex items-center justify-center gap-2 mb-8"
-      >
-        <Sparkles size={16} />
-        {titleGenerating ? "생성 중..." : "AI로 제목 생성"}
-      </button>
-
-      <div className="flex gap-3">
-        <SecondaryButton className="flex-1" onClick={() => setStep("keyword")}>
-          이전
-        </SecondaryButton>
-        <PrimaryButton className="flex-1" onClick={handleGenerate}>
+        <PrimaryButton className="flex-1" onClick={handleGenerate} disabled={selectedKeywords.length < 2 && !titleInput.trim()}>
           자서전 생성 시작
         </PrimaryButton>
       </div>
@@ -961,7 +1033,7 @@ export default function AutobiographyPage() {
             ))}
           </div>
 
-          <button onClick={() => { progressIntervalRef.current && clearInterval(progressIntervalRef.current); setStep("title"); }}
+          <button onClick={() => { progressIntervalRef.current && clearInterval(progressIntervalRef.current); setStep("keyword"); }}
             className="text-sm text-gray-400 hover:text-gray-600 transition underline underline-offset-2">
             생성 취소
           </button>
@@ -1020,6 +1092,7 @@ function FreeEntryArea({
 function RecordingArea({
   recording, isRecording, recSeconds, transcribing, transcript,
   isPlaying, audioRef, onStart, onStop, onReset, onTogglePlay, onTranscriptChange, onFileUpload,
+  placeholder,
 }: {
   recording: RecordingState;
   isRecording: boolean;
@@ -1034,6 +1107,7 @@ function RecordingArea({
   onTogglePlay: () => void;
   onTranscriptChange: (v: string) => void;
   onFileUpload: (blob: Blob, url: string) => void;
+  placeholder?: string;
 }) {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const active = recording.status === "recording" || isRecording;
@@ -1108,7 +1182,7 @@ function RecordingArea({
             value={transcript}
             onChange={(e) => onTranscriptChange(e.target.value)}
             rows={5}
-            placeholder="여기에 직접 입력하거나 위에서 녹음하세요."
+            placeholder={placeholder ?? "여기에 직접 입력하거나 위에서 녹음하세요."}
             className="w-full bg-transparent outline-none text-gray-800 text-sm leading-relaxed resize-none placeholder-gray-300"
           />
         )}
@@ -1140,7 +1214,7 @@ function IntroStep({ onNext }: { onNext: () => void }) {
           </p>
         </div>
 
-        <div className="space-y-3 mb-10">
+        <div className="space-y-3 mb-8">
           {steps.map((s, i) => (
             <div key={i} className="flex items-center gap-4 bg-gray-50 rounded-2xl px-6 py-4">
               <div className="w-10 h-10 bg-brand-200 text-brand-600 rounded-xl flex items-center justify-center shrink-0">
@@ -1152,6 +1226,45 @@ function IntroStep({ onNext }: { onNext: () => void }) {
               </div>
             </div>
           ))}
+        </div>
+
+        <div className="border-2 border-amber-300 bg-amber-50 rounded-2xl p-6 mb-8">
+          <p className="text-sm font-bold text-amber-800 mb-4">
+            자서전 품질을 높이는 답변 방법
+          </p>
+          <div className="space-y-4">
+            <div className="flex gap-3">
+              <span className="w-5 h-5 rounded-full bg-amber-300 text-amber-900 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">1</span>
+              <div>
+                <p className="text-sm font-bold text-amber-900">구체적인 이름·장소·연도를 함께 말씀해 주세요</p>
+                <p className="text-xs text-amber-700 mt-1 leading-relaxed">
+                  <span className="line-through opacity-60">"어릴 때 자주 놀러 갔어요"</span>
+                  <br />
+                  → "1975년 충남 공주 금강 둔치에서 친구 길수랑 물고기 잡던 기억이 나요"
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <span className="w-5 h-5 rounded-full bg-amber-300 text-amber-900 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">2</span>
+              <div>
+                <p className="text-sm font-bold text-amber-900">그때 어떤 기분이었는지도 함께 말씀해 주세요</p>
+                <p className="text-xs text-amber-700 mt-1 leading-relaxed">
+                  <span className="line-through opacity-60">"합격했어요"</span>
+                  <br />
+                  → "합격 전화 받고 눈물이 났어요. 3년을 준비했거든요"
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <span className="w-5 h-5 rounded-full bg-amber-300 text-amber-900 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">3</span>
+              <div>
+                <p className="text-sm font-bold text-amber-900">짧아도 괜찮아요 — 진짜 기억이면 충분합니다</p>
+                <p className="text-xs text-amber-700 mt-1 leading-relaxed">
+                  길게 잘 정리하지 않아도 돼요. AI가 이야기를 글로 다듬어 드립니다.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <button onClick={onNext}
@@ -1213,7 +1326,7 @@ const MACRO_STEPS = ["기본 정보", "인터뷰", "제목", "생성"];
 function stepIndexOf(step: Step): number {
   if (step === "info" || step === "image") return 0;
   if (step === "questions" || step === "followup") return 1;
-  if (step === "keyword" || step === "title") return 2;
+  if (step === "keyword") return 2;
   return 3;
 }
 

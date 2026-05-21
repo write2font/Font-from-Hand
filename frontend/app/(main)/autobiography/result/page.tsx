@@ -11,11 +11,35 @@ const SURVEY_QUESTIONS = [
   "내 이야기가 정확하게 담겼나요?",
   "글이 자연스럽게 읽히나요?",
   "AI가 내 감정과 경험을 잘 표현했나요?",
+  "챕터 간 내용이 자연스럽게 이어지나요?",
+  "이 자서전을 소중한 분께 선물하고 싶으신가요?",
 ];
 
 function SurveyForm() {
-  const [ratings, setRatings] = useState<number[]>(Array(SURVEY_QUESTIONS.length).fill(0));
+  const [ratings, setRatings]   = useState<number[]>(Array(SURVEY_QUESTIONS.length).fill(0));
+  const [freeText, setFreeText] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    try {
+      const autoId = sessionStorage.getItem("autobiography_id");
+      if (autoId) {
+        await fetch(`http://localhost:8080/api/v1/autobiography/${autoId}/survey`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ratings, freeText }),
+        });
+      }
+    } catch {
+      // 저장 실패해도 감사 메시지는 표시
+    } finally {
+      setSubmitting(false);
+      setSubmitted(true);
+    }
+  };
 
   if (submitted) return (
     <div className="text-center py-8 text-emerald-600 font-medium">
@@ -42,12 +66,22 @@ function SurveyForm() {
           </div>
         </div>
       ))}
+      <div>
+        <p className="text-sm text-gray-700 mb-2">자유롭게 의견을 남겨주세요 (선택)</p>
+        <textarea
+          value={freeText}
+          onChange={(e) => setFreeText(e.target.value)}
+          placeholder="불편했던 점, 개선됐으면 하는 점, 좋았던 점 무엇이든 환영합니다."
+          rows={4}
+          className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm text-gray-700 resize-none focus:outline-none focus:ring-2 focus:ring-emerald-300"
+        />
+      </div>
       <Button
-        onClick={() => setSubmitted(true)}
-        disabled={ratings.some((r) => r === 0)}
+        onClick={handleSubmit}
+        disabled={ratings.some((r) => r === 0) || submitting}
         className="mt-2"
       >
-        제출하기
+        {submitting ? "저장 중..." : "제출하기"}
       </Button>
     </div>
   );

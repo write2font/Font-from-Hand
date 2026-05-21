@@ -1,7 +1,9 @@
 package com.example.backend.controller;
 
 import com.example.backend.entity.Autobiography;
+import com.example.backend.entity.SurveyResponse;
 import com.example.backend.repository.AutobiographyRepository;
+import com.example.backend.repository.SurveyResponseRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -26,29 +28,15 @@ public class AutobiographyController {
     private final String autoDir = Paths.get(System.getProperty("user.dir"), "..", "autobiography").normalize().toString();
     private final AutobiographyRepository autobiographyRepository;
     private final com.example.backend.repository.FontRepository fontRepository;
+    private final SurveyResponseRepository surveyResponseRepository;
 
     public AutobiographyController(AutobiographyRepository autobiographyRepository,
-                                   com.example.backend.repository.FontRepository fontRepository) {
-        this.autobiographyRepository = autobiographyRepository;
-        this.fontRepository = fontRepository;
+                                   com.example.backend.repository.FontRepository fontRepository,
+                                   SurveyResponseRepository surveyResponseRepository) {
+        this.autobiographyRepository  = autobiographyRepository;
+        this.fontRepository           = fontRepository;
+        this.surveyResponseRepository = surveyResponseRepository;
     }
-
-    private static final List<String> QUESTIONS = List.of(
-        "Q2. 부모님은 어떤 분이셨으며, 형제들 사이에서 주로 어떤 역할이었나요?",
-        "Q3. 어린 시절, 우리 집이나 동네에서 가장 좋아했던 장소와 그곳의 분위기를 묘사해 주세요.",
-        "Q4. 유년 시절을 떠올리면 가장 먼저 생각나는 상징적인 사건이나 장면 하나는 무엇인가요?",
-        "Q5. 어린 시절의 꿈은 무엇이었으며, 현재의 직업이나 전공을 선택하게 된 결정적인 계기는 무엇이었나요?",
-        "Q6. 학창 시절 가장 열정적으로 몰두했던 공부나 활동은 무엇이었나요?",
-        "Q7. 청년 시절, 사회적으로나 개인적으로 가장 뜨거웠던 기억(예: 첫 취업, 시대적 사건 등)은 무엇인가요?",
-        "Q8. 인생의 방향을 바꿔놓을 만큼 큰 영향을 준 스승이나 친구, 혹은 동료가 있나요?",
-        "Q9. 인생에서 가장 힘들었던 시기는 언제였으며, 무엇이 당신을 가장 괴롭혔나요?",
-        "Q10. 그 시련을 어떻게 버텨내셨으며, 그 과정에서 무엇을 배우셨나요?",
-        "Q11. 내 인생에서 \"이것만큼은 정말 잘했다\"고 자부하는 가장 큰 업적이나 결과물은 무엇인가요?",
-        "Q12. 인생의 경로가 180도 바뀌었던 결정적인 선택의 순간과 그 이유를 들려주세요.",
-        "Q13. 평생을 지탱해 온 자신만의 좌우명이나 꼭 지키고자 했던 원칙은 무엇인가요?",
-        "Q14. 다시 태어난다면 꼭 해보고 싶은 일이나, 후배 세대에게 꼭 전하고 싶은 한마디는 무엇인가요?",
-        "Q15. 훗날 사람들이 당신을 어떤 단어 혹은 어떤 사람으로 기억해주길 바라시나요?"
-    );
 
     // ── 1. STT: 음성 파일 → 텍스트 변환 ─────────────────────────────────────────
     @PostMapping("/transcribe")
@@ -144,24 +132,29 @@ public class AutobiographyController {
             @RequestParam("name")                    String name,
             @RequestParam("birth")                   String birth,
             @RequestParam("hometown")                String hometown,
+            @RequestParam("questions")               String questionsJson,
             @RequestParam("transcriptions")          String transcriptionsJson,
             @RequestParam("followup_transcriptions") String followupJson,
             @RequestParam(value = "free_text", required = false, defaultValue = "") String freeText,
             @RequestParam("keywords")                String keywordsJson,
             @RequestParam(value = "title", required = false, defaultValue = "") String title,
             @RequestParam(value = "font_id", required = false, defaultValue = "") String fontId,
+            @RequestParam(value = "font_file", required = false) MultipartFile fontFile,
             @RequestParam(value = "images", required = false) List<MultipartFile> images
     ) {
         Path tempJson = null;
-        Path imgTemp = null;
+        Path tempFontPath = null;
         try {
             String userId = UUID.randomUUID().toString().substring(0, 8);
 
-            String coverImagePath = null;
+            // 업로드 이미지는 전부 챕터 배치용 — 표지는 AI가 생성
+            List<String> extraImagePaths = new java.util.ArrayList<>();
             if (images != null && !images.isEmpty()) {
-                imgTemp = Files.createTempFile("auto_cover_", ".jpg");
-                images.get(0).transferTo(imgTemp.toFile());
-                coverImagePath = imgTemp.toString();
+                for (int i = 0; i < images.size(); i++) {
+                    Path extraTemp = Files.createTempFile("auto_img_" + i + "_", ".jpg");
+                    images.get(i).transferTo(extraTemp.toFile());
+                    extraImagePaths.add(extraTemp.toString());
+                }
             }
 
             Map<String, Object> payload = new LinkedHashMap<>();
@@ -169,14 +162,22 @@ public class AutobiographyController {
             payload.put("birth", birth);
             payload.put("hometown", hometown);
             payload.put("user_id", userId);
-            payload.put("questions", QUESTIONS);
+            payload.put("questions", objectMapper.readValue(questionsJson, List.class));
             payload.put("transcriptions", objectMapper.readValue(transcriptionsJson, List.class));
             payload.put("followup_transcriptions", objectMapper.readValue(followupJson, List.class));
             payload.put("free_text", freeText);
             payload.put("keywords", objectMapper.readValue(keywordsJson, List.class));
             payload.put("title", title);
-            if (coverImagePath != null) payload.put("cover_image_path", coverImagePath);
-            if (!fontId.isEmpty()) {
+            if (!extraImagePaths.isEmpty()) payload.put("extra_image_paths", extraImagePaths);
+            // 업로드 폰트 파일 우선, 없으면 font_id로 조회
+            if (fontFile != null && !fontFile.isEmpty()) {
+                String origName = fontFile.getOriginalFilename();
+                String ext = (origName != null && origName.contains("."))
+                    ? origName.substring(origName.lastIndexOf('.')) : ".ttf";
+                tempFontPath = Files.createTempFile("auto_font_", ext);
+                fontFile.transferTo(tempFontPath.toFile());
+                payload.put("font_path", tempFontPath.toString());
+            } else if (!fontId.isEmpty()) {
                 fontRepository.findByFontId(fontId)
                     .ifPresent(f -> payload.put("font_path", f.getTtfPath()));
             }
@@ -208,8 +209,8 @@ public class AutobiographyController {
             return ResponseEntity.internalServerError()
                     .body(Map.of("error", e.getMessage()));
         } finally {
-            try { if (tempJson != null) Files.deleteIfExists(tempJson); } catch (IOException ignored) {}
-            try { if (imgTemp  != null) Files.deleteIfExists(imgTemp);  } catch (IOException ignored) {}
+            try { if (tempJson     != null) Files.deleteIfExists(tempJson);     } catch (IOException ignored) {}
+            try { if (tempFontPath != null) Files.deleteIfExists(tempFontPath); } catch (IOException ignored) {}
         }
     }
 
@@ -237,7 +238,25 @@ public class AutobiographyController {
         return ResponseEntity.noContent().build();
     }
 
-    // ── 6. 개별 PDF 다운로드 ───────────────────────────────────────────────────────
+    // ── 6. 설문 저장 ──────────────────────────────────────────────────────────────
+    @PostMapping("/{id}/survey")
+    public ResponseEntity<Void> saveSurvey(
+            @PathVariable long id,
+            @RequestBody Map<String, Object> body
+    ) {
+        Autobiography autobiography = autobiographyRepository.findById(id).orElse(null);
+        if (autobiography == null) return ResponseEntity.notFound().build();
+        try {
+            String ratings  = objectMapper.writeValueAsString(body.get("ratings"));
+            String freeText = (String) body.getOrDefault("freeText", "");
+            surveyResponseRepository.save(new SurveyResponse(autobiography, ratings, freeText));
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    // ── 7. 개별 PDF 다운로드 ───────────────────────────────────────────────────────
     @GetMapping("/download/{id}")
     public ResponseEntity<Resource> downloadById(
             @PathVariable long id,
