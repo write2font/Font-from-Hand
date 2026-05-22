@@ -36,7 +36,19 @@ npm run dev
 
 - 접속: http://localhost:3000
 
-### 3단계: 백엔드
+### 3단계: Python 의존성 설치
+
+폰트 엔진과 자서전 기능에 필요한 패키지를 설치합니다.
+
+```bash
+pip install -r font-engine/requirements.txt
+pip install -r autobiography/requirements.txt
+```
+
+> **자서전 기능을 사용하는 경우** `autobiography/.env` 파일을 직접 생성해야 합니다.
+> API 키 값은 팀 노션을 참고해 주세요.
+
+### 4단계: 백엔드
 
 - IntelliJ에서 FFH/backend 폴더만 선택하여 엽니다.
 - Gradle 빌드 완료 후 FfhApplication을 실행합니다.
