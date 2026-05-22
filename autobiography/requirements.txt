@@ -15,6 +15,9 @@ Pillow>=10.0.0
 # 지역 웹 검색 (WebResearcher)
 tavily-python>=0.3.0
 
+# LLM / OpenAI SDK (충남대 Gateway 호환)
+openai>=1.0.0
+
 # 표지 이미지 생성 (ImageGenerator)
 httpx>=0.24.0
 

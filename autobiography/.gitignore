@@ -14,7 +14,6 @@ venv/
 data/
 output/
 assets/images/
-assets/templates/
 
 # 테스트 파일
 test_*.json
