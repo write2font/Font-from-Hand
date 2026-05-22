@@ -10,6 +10,11 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+try:
+    from repair_ttf_metadata import repair_ttf_metadata
+except ImportError:
+    from .repair_ttf_metadata import repair_ttf_metadata
+
 
 FONT_EM = 1000
 FONT_ASCENT = 820
@@ -158,6 +163,7 @@ def main() -> None:
         script_path = tmp_dir / "build_font.py"
         write_fontforge_script(script_path)
         subprocess.run([args.fontforge, "-script", str(script_path), str(manifest_path), str(out_ttf)], check=True)
+        repair_ttf_metadata(out_ttf, args.family_name)
 
 
 if __name__ == "__main__":
