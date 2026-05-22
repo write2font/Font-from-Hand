@@ -326,7 +326,7 @@ public class AutobiographyController {
     // ── 공통: Python 실행 헬퍼 ────────────────────────────────────────────────────
     private String runPython(String... args) throws Exception {
         List<String> cmd = new ArrayList<>();
-        cmd.add(Paths.get(autoDir, "venv", "bin", "python3").toString());
+        cmd.add("python3");
         cmd.addAll(Arrays.asList(args));
 
         ProcessBuilder pb = new ProcessBuilder(cmd);
