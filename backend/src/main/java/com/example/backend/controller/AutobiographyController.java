@@ -144,6 +144,7 @@ public class AutobiographyController {
     ) {
         Path tempJson = null;
         Path tempFontPath = null;
+        List<Path> tempImagePaths = new java.util.ArrayList<>();
         try {
             String userId = UUID.randomUUID().toString().substring(0, 8);
 
@@ -153,6 +154,7 @@ public class AutobiographyController {
                 for (int i = 0; i < images.size(); i++) {
                     Path extraTemp = Files.createTempFile("auto_img_" + i + "_", ".jpg");
                     images.get(i).transferTo(extraTemp.toFile());
+                    tempImagePaths.add(extraTemp);
                     extraImagePaths.add(extraTemp.toString());
                 }
             }
@@ -195,7 +197,6 @@ public class AutobiographyController {
 
             String pdfPath = (String) result.get("pdf_path");
 
-            // DB 저장 (user는 JWT 연동 후 팀원이 채워줄 것)
             Autobiography saved = autobiographyRepository.save(new Autobiography(null, name, title, pdfPath));
 
             // 다운로드 엔드포인트용 경로 갱신
@@ -211,6 +212,9 @@ public class AutobiographyController {
         } finally {
             try { if (tempJson     != null) Files.deleteIfExists(tempJson);     } catch (IOException ignored) {}
             try { if (tempFontPath != null) Files.deleteIfExists(tempFontPath); } catch (IOException ignored) {}
+            for (Path p : tempImagePaths) {
+                try { Files.deleteIfExists(p); } catch (IOException ignored) {}
+            }
         }
     }
 
@@ -256,7 +260,23 @@ public class AutobiographyController {
         }
     }
 
-    // ── 7. 개별 PDF 다운로드 ───────────────────────────────────────────────────────
+    // ── 7. 설문 결과 전체 조회 (연구/검토용) ───────────────────────────────────────
+    @GetMapping("/surveys")
+    public ResponseEntity<List<Map<String, Object>>> listSurveys() {
+        List<Map<String, Object>> result = surveyResponseRepository.findAll().stream().map(s -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id",             s.getId());
+            m.put("autobiographyId", s.getAutobiography().getId());
+            m.put("subjectName",    s.getAutobiography().getSubjectName());
+            m.put("ratings",        s.getRatings());
+            m.put("freeText",       s.getFreeText());
+            m.put("createdAt",      s.getCreatedAt());
+            return m;
+        }).collect(Collectors.toList());
+        return ResponseEntity.ok(result);
+    }
+
+    // ── 8. 개별 PDF 다운로드 ───────────────────────────────────────────────────────
     @GetMapping("/download/{id}")
     public ResponseEntity<Resource> downloadById(
             @PathVariable long id,
@@ -310,7 +330,7 @@ public class AutobiographyController {
     // ── 공통: Python 실행 헬퍼 ────────────────────────────────────────────────────
     private String runPython(String... args) throws Exception {
         List<String> cmd = new ArrayList<>();
-        cmd.add(Paths.get(autoDir, "venv", "bin", "python3").toString());
+        cmd.add("python3");
         cmd.addAll(Arrays.asList(args));
 
         ProcessBuilder pb = new ProcessBuilder(cmd);

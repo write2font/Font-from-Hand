@@ -6,15 +6,11 @@ __pycache__/
 *.pyc
 *.pyo
 
-# 가상환경
-venv/
-.venv/
 
 # 사용자 데이터 (음성, 트랜스크립트, 생성된 PDF)
 data/
 output/
 assets/images/
-assets/templates/
 
 # 테스트 파일
 test_*.json

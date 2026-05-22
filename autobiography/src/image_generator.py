@@ -62,14 +62,17 @@ class ImageGenerator:
             f"핵심 키워드: {kw_str}\n"
             f"그림 스타일: {style_desc}\n\n"
             f"[프롬프트 작성 규칙]\n"
-            f"1. 제목과 키워드의 정서를 자연/사물/풍경으로 시각화 (하늘, 들판, 나무, 빛, 바람, 꽃, 강, 산 등)\n"
-            f"2. 위에 지정된 스타일을 반드시 반영할 것\n"
-            f"3. 사람, 건물, 글자 절대 없음\n"
-            f"4. 포토리얼리즘·3D렌더·디지털 느낌 완전 배제. 손으로 그린 느낌만.\n"
-            f"5. 50단어 이내 영어로만. 프롬프트 텍스트만 출력.\n\n"
-            f"예시 (키워드: 축구, 고향, 끈기):\n"
-            f"'empty schoolyard at dusk, single worn soccer ball on cracked asphalt, "
-            f"distant hills, {style_desc}'\n"
+            f"1. 제목과 키워드의 '단어'를 그대로 그리지 마라. 그 단어가 주는 감정·분위기·온도감을 자연/풍경으로 은유하라.\n"
+            f"   예) '손' → 손 그리지 말고, 손의 온기를 암시하는 빛·불꽃·따뜻한 햇살로 표현\n"
+            f"   예) '길' → 도로 그리지 말고, 숲 사이 빛 드는 오솔길로 표현\n"
+            f"2. 등장 요소: 자연(하늘, 들판, 나무, 빛, 바람, 꽃, 강, 산 등) + 사물(등불, 의자, 낡은 책 등)만 허용\n"
+            f"3. 사람·손·발·신체 부위·건물·글자 절대 없음\n"
+            f"4. 위에 지정된 그림 스타일을 반드시 반영할 것\n"
+            f"5. 포토리얼리즘·3D렌더·디지털 느낌 완전 배제. 손으로 그린 느낌만.\n"
+            f"6. 50단어 이내 영어로만. 프롬프트 텍스트만 출력.\n\n"
+            f"예시 (제목: 온기를 쌓은 손, 키워드: 할머니, 치즈스틱, 어린 시절):\n"
+            f"'warm kitchen window glowing at dusk, soft candlelight on wooden table, "
+            f"autumn leaves outside, gentle amber light, {style_desc}'\n"
         )
         try:
             resp = client_llm.chat.completions.create(
@@ -89,7 +92,8 @@ class ImageGenerator:
         return (
             base
             + f", {style_desc}, "
-            + "book cover art, no people, no buildings, no text, no letters, "
+            + "book cover art, no people, no hands, no feet, no body parts, no limbs, "
+            + "no buildings, no text, no letters, "
             + "hand-drawn, not photorealistic, not 3D rendered"
         )
 
