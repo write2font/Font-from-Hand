@@ -479,7 +479,7 @@ export default function AutobiographyPage() {
           category: q.category,
           answer: transcriptions[i],
         })),
-      });
+      }, { timeout: 0 });
       const questions: string[] = res.data.followups ?? [];
       if (questions.length === 0) { goToKeyword(); return; }
       setFollowupQuestions(questions);
@@ -502,7 +502,7 @@ export default function AutobiographyPage() {
         name, birth: birthDate,
         transcriptions,
         followup_transcriptions: followupTranscriptions,
-      });
+      }, { timeout: 0 });
       setKeywordCandidates(res.data.keywords ?? []);
     } catch {
       setKeywordCandidates([]);
@@ -524,7 +524,7 @@ export default function AutobiographyPage() {
         transcriptions,
         followup_transcriptions: followupTranscriptions,
         selected_keywords: keywords ?? selectedKeywords,
-      });
+      }, { timeout: 0 });
       setTitleInput(res.data.title ?? "");
     } catch {
       /* 실패 시 빈 상태 유지 */
