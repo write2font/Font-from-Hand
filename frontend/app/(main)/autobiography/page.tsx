@@ -300,7 +300,7 @@ export default function AutobiographyPage() {
     try {
       const fd = new FormData();
       fd.append("audio", blob, "recording.webm");
-      const res = await api.post("/autobiography/transcribe", fd);
+      const res = await api.post("/autobiography/transcribe", fd, { timeout: 0 });
       onResult(res.data.text ?? "");
     } catch {
       await new Promise((r) => setTimeout(r, 1000));
@@ -555,7 +555,7 @@ export default function AutobiographyPage() {
       else if (selectedFontId) fd.append("font_id", selectedFontId);
       images.forEach((img) => fd.append("images", img));
 
-      const res = await api.post("/autobiography/generate", fd);
+      const res = await api.post("/autobiography/generate", fd, { timeout: 0 });
       if (res.status === 200) {
         progressIntervalRef.current && clearInterval(progressIntervalRef.current);
         if (res.data.id) sessionStorage.setItem("autobiography_id", String(res.data.id));
