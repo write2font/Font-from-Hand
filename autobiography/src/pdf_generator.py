@@ -46,10 +46,11 @@ class AutobiographyPDF(FPDF):
 
 class PDFGenerator:
     def __init__(self, user_id: str, font_path: str = None):
-        self.user_id    = user_id
-        font_handler    = FontHandler(user_id, font_path=font_path)
-        self.font_info  = font_handler.get_font_info()
-        self.output_dir = os.path.join(config.OUTPUT_DIR, user_id)
+        self.user_id       = user_id
+        self.has_user_font = bool(font_path)
+        font_handler       = FontHandler(user_id, font_path=font_path)
+        self.font_info     = font_handler.get_font_info()
+        self.output_dir    = os.path.join(config.OUTPUT_DIR, user_id)
         os.makedirs(self.output_dir, exist_ok=True)
 
     def generate(self, autobiography: dict, cover_image_path: str = None,
@@ -89,7 +90,19 @@ class PDFGenerator:
         return output_path
 
     def _register_font(self, pdf: FPDF):
-        # KoPub Batang 우선 시도
+        # 사용자가 직접 업로드한 폰트 최우선 적용
+        if self.has_user_font:
+            font_path = self.font_info.get("font_path", "")
+            if font_path and os.path.exists(font_path):
+                try:
+                    pdf.add_font(self.font_info["font_name"], fname=font_path)
+                    pdf.font_name = self.font_info["font_name"]
+                    print(f"[PDF] 사용자 업로드 폰트 사용: {self.font_info['font_name']}")
+                    return
+                except Exception as e:
+                    print(f"[PDF] ⚠️  사용자 폰트 실패 ({e})")
+
+        # KoPub Batang 시도
         kopub_path = getattr(config, "PDF_KOPUB_FONT", "")
         if kopub_path and os.path.exists(kopub_path):
             try:
@@ -100,7 +113,7 @@ class PDFGenerator:
                 return
             except Exception as e:
                 print(f"[PDF] ⚠️  KoPub 실패 ({e})")
-        # USE_DEFAULT_FONT or 사용자 폰트
+        # 기본 폰트 폴백
         if getattr(config, "USE_DEFAULT_FONT", False):
             try:
                 pdf.add_font("default_font", fname=config.PDF_FALLBACK_FONT)

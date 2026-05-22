@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Mic, Square, Play, Pause, Upload, X, BookOpen, Mic2, FileText, Sparkles, Check, Plus } from "lucide-react";
 import axios from "axios";
+import api from "@/app/lib/axios";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 type Step = "intro" | "info" | "image" | "questions" | "followup" | "keyword" | "generating";
@@ -299,7 +300,7 @@ export default function AutobiographyPage() {
     try {
       const fd = new FormData();
       fd.append("audio", blob, "recording.webm");
-      const res = await axios.post("http://localhost:8080/api/v1/autobiography/transcribe", fd);
+      const res = await api.post("/autobiography/transcribe", fd);
       onResult(res.data.text ?? "");
     } catch {
       await new Promise((r) => setTimeout(r, 1000));
@@ -470,7 +471,7 @@ export default function AutobiographyPage() {
     setStep("followup");
     setLoadingFollowup(true);
     try {
-      const res = await axios.post("http://localhost:8080/api/v1/autobiography/generate-followups", {
+      const res = await api.post("/autobiography/generate-followups", {
         name, birthDate, hometown,
         freeText: getFormattedFreeText(),
         qas: activeQuestions.map((q, i) => ({
@@ -497,7 +498,7 @@ export default function AutobiographyPage() {
     setSelectedKeywords([]);
     setStep("keyword");
     try {
-      const res = await axios.post("http://localhost:8080/api/v1/autobiography/suggest", {
+      const res = await api.post("/autobiography/suggest", {
         name, birth: birthDate,
         transcriptions,
         followup_transcriptions: followupTranscriptions,
@@ -518,7 +519,7 @@ export default function AutobiographyPage() {
   const generateTitle = async (keywords?: string[]) => {
     setTitleGenerating(true);
     try {
-      const res = await axios.post("http://localhost:8080/api/v1/autobiography/suggest", {
+      const res = await api.post("/autobiography/suggest", {
         name, birth: birthDate,
         transcriptions,
         followup_transcriptions: followupTranscriptions,
@@ -554,7 +555,7 @@ export default function AutobiographyPage() {
       else if (selectedFontId) fd.append("font_id", selectedFontId);
       images.forEach((img) => fd.append("images", img));
 
-      const res = await axios.post("http://localhost:8080/api/v1/autobiography/generate", fd);
+      const res = await api.post("/autobiography/generate", fd);
       if (res.status === 200) {
         progressIntervalRef.current && clearInterval(progressIntervalRef.current);
         if (res.data.id) sessionStorage.setItem("autobiography_id", String(res.data.id));
@@ -573,7 +574,7 @@ export default function AutobiographyPage() {
   const fetchFonts = async () => {
     setFontsLoading(true);
     try {
-      const res = await axios.get("http://localhost:8080/api/v1/fonts/list", { withCredentials: true });
+      const res = await api.get("/fonts/list");
       setFontList(res.data ?? []);
     } catch {
       setFontList([]);

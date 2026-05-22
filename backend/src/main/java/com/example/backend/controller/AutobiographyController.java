@@ -256,7 +256,23 @@ public class AutobiographyController {
         }
     }
 
-    // ── 7. 개별 PDF 다운로드 ───────────────────────────────────────────────────────
+    // ── 7. 설문 결과 전체 조회 (연구/검토용) ───────────────────────────────────────
+    @GetMapping("/surveys")
+    public ResponseEntity<List<Map<String, Object>>> listSurveys() {
+        List<Map<String, Object>> result = surveyResponseRepository.findAll().stream().map(s -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id",             s.getId());
+            m.put("autobiographyId", s.getAutobiography().getId());
+            m.put("subjectName",    s.getAutobiography().getSubjectName());
+            m.put("ratings",        s.getRatings());
+            m.put("freeText",       s.getFreeText());
+            m.put("createdAt",      s.getCreatedAt());
+            return m;
+        }).collect(Collectors.toList());
+        return ResponseEntity.ok(result);
+    }
+
+    // ── 8. 개별 PDF 다운로드 ───────────────────────────────────────────────────────
     @GetMapping("/download/{id}")
     public ResponseEntity<Resource> downloadById(
             @PathVariable long id,

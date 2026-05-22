@@ -6,32 +6,32 @@ import Link from "next/link";
 import PageHeader from "@/components/ui/PageHeader";
 import StepItem from "@/components/ui/StepItem";
 import Button from "@/components/ui/Button";
+import api from "@/app/lib/axios";
 
 const SURVEY_QUESTIONS = [
-  "내 이야기가 정확하게 담겼나요?",
+  "내가 의도한 이야기가 잘 담겼나요?",
+  "글의 사실 관계가 실제로 말씀한 내용과 일치하나요?",
   "글이 자연스럽게 읽히나요?",
   "AI가 내 감정과 경험을 잘 표현했나요?",
   "챕터 간 내용이 자연스럽게 이어지나요?",
-  "이 자서전을 소중한 분께 선물하고 싶으신가요?",
 ];
 
+const STAR_LABELS = ["매우 아니다", "아니다", "보통이다", "그렇다", "매우 그렇다"];
+
 function SurveyForm() {
-  const [ratings, setRatings]   = useState<number[]>(Array(SURVEY_QUESTIONS.length).fill(0));
-  const [freeText, setFreeText] = useState("");
+  const [ratings, setRatings]     = useState<number[]>(Array(SURVEY_QUESTIONS.length).fill(0));
+  const [freeText, setFreeText]   = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  const allAnswered = ratings.every((r) => r > 0);
 
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
       const autoId = sessionStorage.getItem("autobiography_id");
       if (autoId) {
-        await fetch(`http://localhost:8080/api/v1/autobiography/${autoId}/survey`, {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ratings, freeText }),
-        });
+        await api.post(`/autobiography/${autoId}/survey`, { ratings, freeText });
       }
     } catch {
       // 저장 실패해도 감사 메시지는 표시
@@ -42,32 +42,60 @@ function SurveyForm() {
   };
 
   if (submitted) return (
-    <div className="text-center py-8 text-emerald-600 font-medium">
-      소중한 의견 감사합니다!
+    <div className="text-center py-10">
+      <div className="w-12 h-12 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
+        <Check size={24} strokeWidth={3} />
+      </div>
+      <p className="text-emerald-700 font-semibold text-lg">소중한 의견 감사합니다!</p>
+      <p className="text-gray-400 text-sm mt-1">더 나은 자서전을 만드는 데 큰 도움이 됩니다.</p>
     </div>
   );
 
   return (
-    <div className="space-y-6">
-      {SURVEY_QUESTIONS.map((q, qi) => (
-        <div key={qi}>
-          <p className="text-sm text-gray-700 mb-2">{q}</p>
-          <div className="flex gap-1">
-            {[1, 2, 3, 4, 5].map((star) => (
-              <button key={star} onClick={() => {
-                setRatings((prev) => { const next = [...prev]; next[qi] = star; return next; });
-              }}>
-                <Star
-                  size={24}
-                  className={star <= ratings[qi] ? "text-yellow-400 fill-yellow-400" : "text-gray-200"}
-                />
-              </button>
-            ))}
+    <div>
+      <p className="text-sm text-gray-500 mb-8">
+        AI 자서전의 품질을 평가해 주세요. 모든 항목에 응답해야 제출할 수 있어요.
+      </p>
+
+      <div className="space-y-8">
+        {SURVEY_QUESTIONS.map((q, qi) => (
+          <div key={qi} className="border-b border-gray-100 pb-7 last:border-0">
+            <div className="flex gap-3 mb-4">
+              <span className="text-xs font-bold text-emerald-500 bg-emerald-50 rounded-full w-6 h-6 flex items-center justify-center shrink-0 mt-0.5">
+                {qi + 1}
+              </span>
+              <p className="text-sm font-medium text-gray-800 leading-relaxed">{q}</p>
+            </div>
+            <div className="flex items-center gap-2 pl-9">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  onClick={() => setRatings((prev) => { const next = [...prev]; next[qi] = star; return next; })}
+                  className="flex flex-col items-center gap-1 group"
+                >
+                  <Star
+                    size={28}
+                    className={
+                      star <= ratings[qi]
+                        ? "text-yellow-400 fill-yellow-400"
+                        : "text-gray-200 group-hover:text-yellow-200 group-hover:fill-yellow-100 transition-colors"
+                    }
+                  />
+                  <span className="text-[10px] text-gray-400 hidden sm:block">{star}</span>
+                </button>
+              ))}
+              {ratings[qi] > 0 && (
+                <span className="ml-2 text-xs text-gray-400 italic">
+                  {STAR_LABELS[ratings[qi] - 1]}
+                </span>
+              )}
+            </div>
           </div>
-        </div>
-      ))}
-      <div>
-        <p className="text-sm text-gray-700 mb-2">자유롭게 의견을 남겨주세요 (선택)</p>
+        ))}
+      </div>
+
+      <div className="mt-8">
+        <p className="text-sm font-medium text-gray-800 mb-2">자유롭게 의견을 남겨주세요 <span className="text-gray-400 font-normal">(선택)</span></p>
         <textarea
           value={freeText}
           onChange={(e) => setFreeText(e.target.value)}
@@ -76,13 +104,19 @@ function SurveyForm() {
           className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm text-gray-700 resize-none focus:outline-none focus:ring-2 focus:ring-emerald-300"
         />
       </div>
-      <Button
-        onClick={handleSubmit}
-        disabled={ratings.some((r) => r === 0) || submitting}
-        className="mt-2"
-      >
-        {submitting ? "저장 중..." : "제출하기"}
-      </Button>
+
+      <div className="mt-6 flex items-center gap-4">
+        <Button
+          onClick={handleSubmit}
+          disabled={!allAnswered || submitting}
+          className="flex items-center gap-2"
+        >
+          {submitting ? "저장 중..." : "평가 제출하기"}
+        </Button>
+        {!allAnswered && (
+          <p className="text-xs text-gray-400">모든 항목에 별점을 선택해 주세요.</p>
+        )}
+      </div>
     </div>
   );
 }
@@ -90,32 +124,25 @@ function SurveyForm() {
 export default function AutobiographyResultPage() {
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(true);
-  const [pdfError, setPdfError] = useState(false);
+  const [pdfError, setPdfError]     = useState(false);
   const blobUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     const autoId = sessionStorage.getItem("autobiography_id");
-    const url = autoId
-      ? `http://localhost:8080/api/v1/autobiography/download/${autoId}?inline=true`
-      : "http://localhost:8080/api/v1/autobiography/download?inline=true";
-    fetch(url, {
-      credentials: "include",
-    })
-      .then((r) => {
-        if (!r.ok) throw new Error("not ok");
-        return r.blob();
-      })
-      .then((blob) => {
-        const url = URL.createObjectURL(blob);
-        blobUrlRef.current = url;
-        setPdfBlobUrl(url);
+    const endpoint = autoId
+      ? `/autobiography/download/${autoId}?inline=true`
+      : `/autobiography/download?inline=true`;
+
+    api.get(endpoint, { responseType: "blob" })
+      .then((res) => {
+        const objectUrl = URL.createObjectURL(res.data);
+        blobUrlRef.current = objectUrl;
+        setPdfBlobUrl(objectUrl);
       })
       .catch(() => setPdfError(true))
       .finally(() => setPdfLoading(false));
 
-    return () => {
-      if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
-    };
+    return () => { if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current); };
   }, []);
 
   const handleDownload = () => {
@@ -179,7 +206,8 @@ export default function AutobiographyResultPage() {
         </div>
 
         <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-gray-100 mb-8">
-          <h3 className="text-lg font-bold mb-6">다운로드</h3>
+          <h3 className="text-lg font-bold mb-2">다운로드</h3>
+          <p className="text-sm text-gray-400 mb-6">PDF 파일로 저장하거나 인쇄하실 수 있습니다.</p>
           <Button size="lg" onClick={handleDownload} className="flex items-center justify-center gap-3">
             <Download size={20} />
             자서전 PDF 다운로드
@@ -187,7 +215,8 @@ export default function AutobiographyResultPage() {
         </div>
 
         <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-gray-100 mb-8">
-          <h3 className="text-lg font-bold mb-6">자서전 평가</h3>
+          <h3 className="text-lg font-bold mb-1">자서전 품질 평가</h3>
+          <p className="text-xs text-gray-400 mb-6">연구 목적으로 수집되며 서비스 개선에 활용됩니다.</p>
           <SurveyForm />
         </div>
 
