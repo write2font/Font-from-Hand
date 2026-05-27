@@ -1,0 +1,305 @@
+{
+  "version": 1,
+  "global": {
+    "glyph_size": 512,
+    "default_center_x": 256,
+    "default_center_y": 270,
+    "default_width": 230,
+    "default_height": 300,
+    "outlier_low_ratio": 0.75,
+    "outlier_high_ratio": 1.25
+  },
+  "zones": {
+    "latin_cap": {
+      "anchor": "romn_cap",
+      "target_center_x": 256,
+      "target_center_y": 260,
+      "target_width": 258,
+      "target_height": 350
+    },
+    "latin_xheight": {
+      "anchor": "romn_xheight",
+      "target_center_x": 256,
+      "target_center_y": 310,
+      "target_width": 236,
+      "target_height": 282
+    },
+    "latin_ascender": {
+      "anchor": "romn_ascender",
+      "target_center_x": 256,
+      "target_center_y": 270,
+      "target_width": 234,
+      "target_height": 348
+    },
+    "latin_descender": {
+      "anchor": "romn_descender",
+      "target_center_x": 256,
+      "target_center_y": 315,
+      "target_width": 238,
+      "target_height": 348
+    },
+    "hangul_icf": {
+      "anchor": "ideographic_face",
+      "target_center_x": 256,
+      "target_center_y": 258,
+      "target_width": 326,
+      "target_height": 356
+    },
+    "punct_bottom": {
+      "anchor": "punct_bottom",
+      "target_center_x": 256,
+      "target_center_y": 376,
+      "target_width": 94,
+      "target_height": 278
+    },
+    "punct_top": {
+      "anchor": "punct_top",
+      "target_center_x": 256,
+      "target_center_y": 135,
+      "target_width": 74,
+      "target_height": 135
+    },
+    "punct_middle": {
+      "anchor": "punct_middle",
+      "target_center_x": 256,
+      "target_center_y": 270,
+      "target_width": 155,
+      "target_height": 210
+    },
+    "operator_middle": {
+      "anchor": "operator_middle",
+      "target_center_x": 256,
+      "target_center_y": 278,
+      "target_width": 170,
+      "target_height": 126
+    },
+    "tall_center": {
+      "anchor": "tall_center",
+      "target_center_x": 256,
+      "target_center_y": 270,
+      "target_width": 112,
+      "target_height": 345
+    }
+  },
+  "groups": {
+    "latin_upper": {
+      "zone": "latin_cap",
+      "scale_policy": "group_median_clamp",
+      "min_scale_ratio": 0.85,
+      "max_scale_ratio": 1.15
+    },
+    "latin_upper_q": {
+      "zone": "latin_cap",
+      "scale_policy": "group_median_clamp",
+      "min_scale_ratio": 0.85,
+      "max_scale_ratio": 1.15
+    },
+    "latin_upper_wide": {
+      "zone": "latin_cap",
+      "target_width": 292,
+      "scale_policy": "group_median_clamp",
+      "min_scale_ratio": 0.85,
+      "max_scale_ratio": 1.15
+    },
+    "latin_upper_narrow": {
+      "zone": "latin_cap",
+      "target_width": 376,
+      "target_height": 360,
+      "scale_policy": "group_median_clamp",
+      "min_scale_ratio": 0.85,
+      "max_scale_ratio": 1.15
+    },
+    "latin_lower_xheight": {
+      "zone": "latin_xheight",
+      "scale_policy": "group_median_clamp",
+      "min_scale_ratio": 0.85,
+      "max_scale_ratio": 1.15
+    },
+    "latin_lower_wide": {
+      "zone": "latin_xheight",
+      "target_width": 286,
+      "scale_policy": "group_median_clamp",
+      "min_scale_ratio": 0.85,
+      "max_scale_ratio": 1.15
+    },
+    "latin_lower_ascender": {
+      "zone": "latin_ascender",
+      "scale_policy": "group_median_clamp",
+      "min_scale_ratio": 0.85,
+      "max_scale_ratio": 1.15
+    },
+    "latin_lower_descender": {
+      "zone": "latin_descender",
+      "scale_policy": "group_median_clamp",
+      "min_scale_ratio": 0.85,
+      "max_scale_ratio": 1.15
+    },
+    "latin_lower_narrow": {
+      "zone": "latin_ascender",
+      "target_width": 112,
+      "target_height": 340,
+      "scale_policy": "group_median_clamp",
+      "min_scale_ratio": 0.85,
+      "max_scale_ratio": 1.15
+    },
+    "latin_lower_t": {
+      "zone": "latin_xheight",
+      "target_width": 112,
+      "target_height": 340,
+      "scale_policy": "group_median_clamp",
+      "min_scale_ratio": 0.85,
+      "max_scale_ratio": 1.15
+    },
+    "latin_lower_j": {
+      "zone": "latin_descender",
+      "target_width": 112,
+      "target_height": 348,
+      "scale_policy": "group_median_clamp",
+      "min_scale_ratio": 0.85,
+      "max_scale_ratio": 1.15
+    },
+    "digit": {
+      "zone": "latin_cap",
+      "target_width": 248,
+      "target_height": 332,
+      "target_center_y": 265,
+      "scale_policy": "group_median_clamp",
+      "min_scale_ratio": 0.85,
+      "max_scale_ratio": 1.15
+    },
+    "digit_one": {
+      "zone": "latin_cap",
+      "target_width": 215,
+      "target_height": 344,
+      "target_center_y": 265,
+      "scale_policy": "group_median_clamp",
+      "min_scale_ratio": 0.85,
+      "max_scale_ratio": 1.15
+    },
+    "hangul_vertical_no_final": {
+      "zone": "hangul_icf",
+      "scale_policy": "group_median_clamp",
+      "min_scale_ratio": 0.90,
+      "max_scale_ratio": 1.10
+    },
+    "hangul_vertical_with_final": {
+      "zone": "hangul_icf",
+      "scale_policy": "group_median_clamp",
+      "min_scale_ratio": 0.90,
+      "max_scale_ratio": 1.10,
+      "target_height_adjust": 12,
+      "target_center_y_adjust": 4
+    },
+    "hangul_horizontal_no_final": {
+      "zone": "hangul_icf",
+      "scale_policy": "group_median_clamp",
+      "min_scale_ratio": 0.90,
+      "max_scale_ratio": 1.10
+    },
+    "hangul_horizontal_with_final": {
+      "zone": "hangul_icf",
+      "scale_policy": "group_median_clamp",
+      "min_scale_ratio": 0.90,
+      "max_scale_ratio": 1.10,
+      "target_height_adjust": 12,
+      "target_center_y_adjust": 4
+    },
+    "hangul_mixed_no_final": {
+      "zone": "hangul_icf",
+      "scale_policy": "group_median_clamp",
+      "min_scale_ratio": 0.90,
+      "max_scale_ratio": 1.10
+    },
+    "hangul_mixed_with_final": {
+      "zone": "hangul_icf",
+      "scale_policy": "group_median_clamp",
+      "min_scale_ratio": 0.90,
+      "max_scale_ratio": 1.10,
+      "target_height_adjust": 12,
+      "target_center_y_adjust": 4
+    },
+    "punct_bottom_dot": {
+      "zone": "punct_bottom",
+      "target_width": 52,
+      "target_height": 56,
+      "scale_policy": "fixed_small"
+    },
+    "punct_bottom_comma": {
+      "zone": "punct_bottom",
+      "target_width": 58,
+      "target_height": 112,
+      "target_center_y": 382,
+      "scale_policy": "fixed_small"
+    },
+    "punct_top": {
+      "zone": "punct_top",
+      "scale_policy": "fixed_small"
+    },
+    "punct_horizontal_mid": {
+      "zone": "operator_middle",
+      "target_width": 168,
+      "target_height": 44,
+      "scale_policy": "fixed_small"
+    },
+    "punct_horizontal_bottom": {
+      "zone": "punct_bottom",
+      "target_width": 180,
+      "target_height": 44,
+      "target_center_y": 398,
+      "scale_policy": "fixed_small"
+    },
+    "punct_operator": {
+      "zone": "operator_middle",
+      "scale_policy": "fixed_small"
+    },
+    "punct_bracket": {
+      "zone": "tall_center",
+      "scale_policy": "fixed_small"
+    },
+    "punct_slash": {
+      "zone": "tall_center",
+      "target_width": 126,
+      "target_height": 330,
+      "scale_policy": "fixed_small"
+    },
+    "punct_middle": {
+      "zone": "punct_middle",
+      "scale_policy": "fixed_small"
+    },
+    "punct_large_symbol": {
+      "zone": "latin_cap",
+      "reference_group": "latin_upper",
+      "target_width": 200,
+      "target_height": 280,
+      "target_center_y": 272,
+      "scale_policy": "reference_group_clamp",
+      "min_scale_ratio": 0.80,
+      "max_scale_ratio": 1.15
+    },
+    "symbol": {
+      "zone": "punct_middle",
+      "scale_policy": "fixed_small"
+    },
+    "default": {
+      "zone": "punct_middle",
+      "target_width": 230,
+      "target_height": 300,
+      "scale_policy": "none"
+    }
+  },
+  "overrides": {
+    ".": {"group": "punct_bottom_dot"},
+    ",": {"group": "punct_bottom_comma"},
+    ";": {"group": "punct_bottom_comma"},
+    ":": {"group": "punct_bottom_comma"},
+    "\"": {"group": "punct_top"},
+    "'": {"group": "punct_top"},
+    "`": {"group": "punct_top"},
+    "^": {"group": "punct_top"},
+    "@": {"group": "punct_large_symbol"},
+    "#": {"group": "punct_large_symbol"},
+    "$": {"group": "punct_large_symbol"},
+    "%": {"group": "punct_large_symbol"},
+    "&": {"group": "punct_large_symbol"}
+  }
+}

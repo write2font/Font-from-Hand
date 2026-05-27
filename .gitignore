@@ -5,16 +5,25 @@ Thumbs.db
 .env
 .env.local
 
-# 2. 프론트엔드 (Next.js) 
+# AI/model artifacts
+fewshot-font-generation/write2font/pth/*
+!fewshot-font-generation/write2font/pth/.gitkeep
+fewshot-font-generation/write2font/png/
+fewshot-font-generation/write2font/result/
+*.pth
+*.pt
+*.ckpt
+
+# Frontend (Next.js)
 node_modules/
 .next/
 out/
 
-# 3. 백엔드 (Spring Boot) 
+# Backend (Spring Boot)
 build/
 .gradle/
 bin/
 
-# 4. 파이썬 (Font-Engine)
+# Python/font engines
 __pycache__/
 venv/

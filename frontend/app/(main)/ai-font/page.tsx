@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useRef, useState, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
-  Info,
+  CheckCircle2,
   Download,
+  FileImage,
+  Info,
+  Loader2,
   UploadCloud,
   X,
-  Loader2,
-  CheckCircle2,
   Zap,
 } from "lucide-react";
 import api from "@/app/lib/axios";
@@ -15,7 +16,8 @@ import { useRouter } from "next/navigation";
 import StepItem from "@/components/ui/StepItem";
 import Button from "@/components/ui/Button";
 
-const SAMPLE_CHARS = "가나다라마바사아자차카타파하ABCDE12345";
+const SAMPLE_CHARS =
+  "가 각 값 갸 걔 거 곬 궤 기 까 깎 꺄 꼬 꽈 꾀 꾸 꿔 꿜 끄 난 낯 넓 늬 다 닫 닭 닿 따 떫 많 맘 몫 밥 밭 뻐 뼈 뽀 뾱 쀼 삿 샀 샤 쒀 쓩 앉 앙 엌 왱 읊 잃 잎 잦 젊 짜 쪄 쭁 췸 큉 텍 툽 팃 퓽 핥 휸";
 
 export default function AiFontPage() {
   const router = useRouter();
@@ -46,15 +48,21 @@ export default function AiFontPage() {
     if (file && file.type.startsWith("image/")) setSelectedFile(file);
   };
 
+  const clearSelectedFile = () => {
+    setSelectedFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   const handleSubmit = async () => {
     if (!selectedFile) {
-      alert("샘플 이미지를 업로드해 주세요!");
+      alert("샘플 이미지를 업로드해 주세요.");
       return;
     }
     if (!fontName.trim()) {
       setFontNameError(true);
       return;
     }
+
     setIsProcessing(true);
     setProgress(0);
 
@@ -66,14 +74,14 @@ export default function AiFontPage() {
     try {
       const response = await api.post("/fonts/upload", formData, {
         headers: { "Content-Type": "multipart/form-data" },
-        timeout: 600000,
+        timeout: 1800000,
       });
       setProgress(100);
       localStorage.setItem("lastFontId", response.data.fontId);
       localStorage.setItem("lastFontName", response.data.fontName);
       setTimeout(() => router.push("/ai-font/result"), 500);
     } catch (error) {
-      console.error("전송 실패:", error);
+      console.error("AI font upload failed:", error);
       alert("폰트 생성 중 서버 오류가 발생했습니다.");
       setIsProcessing(false);
     }
@@ -95,8 +103,8 @@ export default function AiFontPage() {
           </h1>
           <p className="text-gray-500 mb-8">
             {progress === 100
-              ? "결과 페이지로 이동합니다..."
-              : "20자 샘플을 분석하여 2,350자 전체를 생성 중입니다. 잠시만 기다려주세요! (약 15~30분 소요)"}
+              ? "결과 페이지로 이동합니다."
+              : "64자 샘플을 분석하여 2,350자 전체를 생성 중입니다. 잠시만 기다려주세요. CPU 환경에서는 시간이 오래 걸릴 수 있습니다."}
           </p>
           <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden mb-3">
             <div
@@ -113,18 +121,18 @@ export default function AiFontPage() {
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       <main className="max-w-5xl mx-auto px-6 pt-16">
-        {/* 헤더 */}
         <div className="flex items-start justify-between mb-2">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">AI 폰트 생성</h1>
-            <p className="text-gray-500 mt-2">20자만 작성하면 AI가 2,350자 전체를 자동으로 생성합니다</p>
+            <p className="text-gray-500 mt-2">
+              2350자 템플릿과 같은 형식의 샘플지에 64자만 작성하면 AI가 전체 글자를 생성합니다.
+            </p>
           </div>
           <span className="mt-1 px-3 py-1 bg-brand-100 text-brand-600 text-xs font-bold rounded-full">
-            유료
+            AI
           </span>
         </div>
 
-        {/* 스텝 */}
         <div className="flex justify-between items-center my-12 px-10">
           <StepItem number={1} label="샘플 업로드" isActive />
           <div className="flex-1 h-px bg-gray-200 mx-4" />
@@ -133,43 +141,52 @@ export default function AiFontPage() {
           <StepItem number={3} label="결과" />
         </div>
 
-        {/* 우선 처리 서비스 안내 */}
         <div className="bg-brand-50 border border-brand-100 p-6 rounded-3xl flex items-start gap-4 mb-6">
           <div className="w-10 h-10 bg-brand-100 text-brand-600 rounded-2xl flex items-center justify-center shrink-0">
             <Zap size={20} />
           </div>
           <div>
-            <h3 className="font-bold text-brand-900 mb-1">우선 처리 서비스</h3>
+            <h3 className="font-bold text-brand-900 mb-1">AI 생성 안내</h3>
             <p className="text-sm text-brand-700/80 leading-relaxed">
-              유료 서비스는 대기 없이 즉시 처리되며, AI가 고품질 폰트를 생성합니다. 평균 처리 시간은 15~30분입니다.
+              업로드한 샘플지는 네 모서리 마커로 보정한 뒤, 11x17 격자의 앞 64칸만 추출해 AI 모델에 전달합니다.
             </p>
           </div>
         </div>
 
-        {/* 권장 샘플 글자 */}
         <div className="bg-white p-10 rounded-3xl shadow-sm border border-gray-100 mb-6">
           <div className="flex items-center gap-2 mb-4 text-brand-600 font-bold">
             <Info size={18} />
-            <span>권장 샘플 글자</span>
+            <span>작성할 64자</span>
           </div>
-          <p className="text-xl font-medium text-gray-800 mb-5 tracking-wider">{SAMPLE_CHARS}</p>
+          <p className="text-xl font-medium text-gray-800 mb-5 leading-9 break-keep">
+            {SAMPLE_CHARS}
+          </p>
           <ul className="space-y-2 text-sm text-gray-500 mb-8">
-            <li>• 한글 자음/모음이 골고루 포함된 20자를 작성하세요</li>
-            <li>• 숫자와 영문도 포함하면 더 정확한 결과를 얻을 수 있습니다</li>
-            <li>• 검은색 펜으로 또렷하게 작성해주세요</li>
-            <li>• 백지 위에 작성하고 밝은 곳에서 촬영하세요</li>
+            <li>• 템플릿은 2350자 수기 템플릿과 같은 마커/격자 형식입니다.</li>
+            <li>• 왼쪽 위 첫 칸부터 오른쪽으로, 줄이 바뀌면 다음 줄 왼쪽부터 순서대로 작성하세요.</li>
+            <li>• 64자 이후의 빈 칸은 작성하지 않아도 됩니다.</li>
+            <li>• 검은색 펜으로 진하게 쓰고, 촬영할 때 네 모서리 마커가 모두 보이게 해주세요.</li>
           </ul>
-          <a
-            href="/templates/ai_sample_template.pdf"
-            download
-            className="inline-flex items-center gap-2 px-6 py-3 bg-brand-600 text-white font-bold rounded-xl hover:bg-brand-700 transition"
-          >
-            <Download size={18} />
-            샘플 템플릿 다운로드
-          </a>
+          <div className="flex flex-wrap gap-3">
+            <a
+              href="/templates/ai_sample_template.pdf"
+              download
+              className="inline-flex items-center gap-2 px-6 py-3 bg-brand-600 text-white font-bold rounded-xl hover:bg-brand-700 transition"
+            >
+              <Download size={18} />
+              PDF 템플릿 다운로드
+            </a>
+            <a
+              href="/templates/ai_sample_template.png"
+              download
+              className="inline-flex items-center gap-2 px-6 py-3 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition"
+            >
+              <FileImage size={18} />
+              PNG 템플릿 다운로드
+            </a>
+          </div>
         </div>
 
-        {/* 이미지 업로드 */}
         <div className="bg-white p-10 rounded-3xl shadow-sm border border-gray-100 mb-8">
           <h2 className="text-sm font-bold text-gray-700 mb-4">샘플 이미지 업로드</h2>
           <input
@@ -189,8 +206,9 @@ export default function AiFontPage() {
                 <span className="text-sm text-gray-700 truncate">{selectedFile.name}</span>
               </div>
               <button
-                onClick={() => { setSelectedFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                onClick={clearSelectedFile}
                 className="text-gray-400 hover:text-red-500 transition ml-2 shrink-0"
+                aria-label="선택한 파일 제거"
               >
                 <X size={18} />
               </button>
@@ -203,7 +221,7 @@ export default function AiFontPage() {
               className="border-2 border-dashed border-gray-200 rounded-3xl py-20 flex flex-col items-center justify-center cursor-pointer hover:border-brand-300 hover:bg-brand-50 transition group"
             >
               <UploadCloud size={48} className="text-gray-300 mb-4 group-hover:text-brand-400" />
-              <p className="text-gray-600 font-medium mb-1">20자 샘플을 촬영한 이미지를 업로드하세요</p>
+              <p className="text-gray-600 font-medium mb-1">64자 샘플지를 촬영한 이미지를 업로드하세요</p>
               <p className="text-gray-400 text-xs">최대 20MB</p>
             </div>
           )}
@@ -215,9 +233,14 @@ export default function AiFontPage() {
             <input
               type="text"
               value={fontName}
-              onChange={(e) => { setFontName(e.target.value); if (e.target.value.trim()) setFontNameError(false); }}
-              onBlur={() => { if (!fontName.trim()) setFontNameError(true); }}
-              placeholder="예: 할머니체, 내손글씨"
+              onChange={(e) => {
+                setFontName(e.target.value);
+                if (e.target.value.trim()) setFontNameError(false);
+              }}
+              onBlur={() => {
+                if (!fontName.trim()) setFontNameError(true);
+              }}
+              placeholder="예: 나의 손글씨"
               className={`w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 text-gray-800 transition ${
                 fontNameError
                   ? "border-red-400 focus:ring-red-300"

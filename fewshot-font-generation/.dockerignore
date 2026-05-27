@@ -1,0 +1,10 @@
+.git
+__pycache__
+**/__pycache__
+.pytest_cache
+write2font/png
+write2font/result
+write2font/pth
+*.pth
+*.pt
+*.ckpt

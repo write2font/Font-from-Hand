@@ -1,0 +1,9 @@
+dset:
+  test:
+    extension: ttf
+    data_dir: write2font/ttf
+    source_path: data/kor/source.ttf
+    source_ext: ttf
+    ref_chars: write2font/ref_chars.json
+    gen_chars: write2font/gen_chars.json
+

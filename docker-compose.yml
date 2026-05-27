@@ -1,0 +1,57 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:h2:file:/data/font_from_hand;MODE=MySQL;DATABASE_TO_LOWER=TRUE
+      SPRING_DATASOURCE_USERNAME: sa
+      SPRING_DATASOURCE_PASSWORD: ""
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      FONT_ENGINE_HANDWRITE_USE_DOCKER: "false"
+      FONT_ENGINE_HANDWRITE_ENGINE_DIR: /workspace/handwrite2350-engine
+      FONT_ENGINE_LEGACY_PYTHON_COMMAND: python3
+      FONT_ENGINE_HANDWRITE_WORKERS: "8"
+      FONT_ENGINE_AI_USE_DOCKER: "false"
+      FONT_ENGINE_AI_ENGINE_DIR: /workspace/fewshot-font-generation
+      FONT_ENGINE_AI_PYTHON_COMMAND: python3
+      FONT_ENGINE_AI_MODEL: MX
+      FONT_ENGINE_AI_WEIGHT_PATH: write2font/pth/last.pth
+    volumes:
+      - backend-data:/data
+      - backend-uploads:/workspace/backend/uploads
+      - ./fewshot-font-generation/write2font/pth:/workspace/fewshot-font-generation/write2font/pth:ro
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+  handwrite2350:
+    build:
+      context: ./handwrite2350-engine
+    image: handwrite2350:latest
+    profiles:
+      - tools
+    command: ["--check-env"]
+    volumes:
+      - ./handwrite2350-engine/samples:/app/samples
+      - ./handwrite2350-engine/outputs:/app/outputs
+
+  write2font-ai:
+    build:
+      context: ./fewshot-font-generation
+      dockerfile: Dockerfile.cpu
+    image: write2font-ai:cpu
+    profiles:
+      - tools
+    command: ["python", "-X", "utf8", "write2font/run_pipeline.py", "--help"]
+
+volumes:
+  backend-data:
+  backend-uploads:
