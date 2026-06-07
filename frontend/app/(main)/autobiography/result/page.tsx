@@ -8,23 +8,27 @@ import StepItem from "@/components/ui/StepItem";
 import Button from "@/components/ui/Button";
 import api from "@/app/lib/axios";
 
-const SURVEY_QUESTIONS = [
-  "내가 의도한 이야기가 잘 담겼나요?",
-  "글의 사실 관계가 실제로 말씀한 내용과 일치하나요?",
-  "글이 자연스럽게 읽히나요?",
-  "AI가 내 감정과 경험을 잘 표현했나요?",
-  "챕터 간 내용이 자연스럽게 이어지나요?",
+const SURVEY_QUESTIONS: { key: string; label: string }[] = [
+  { key: "원자료충실",      label: "내가 말한 내용이 자서전에 충실하게 담겼나요?" },
+  { key: "할루시네이션위험도", label: "실제로 말한 내용만 담겨 있나요?" },
+  { key: "감정표현적합성",   label: "AI가 내 감정과 경험을 적절하게 표현했나요?" },
+  { key: "화자고유성",      label: "이 자서전이 나만의 고유한 이야기처럼 느껴지나요?" },
+  { key: "챕터구성연결성",   label: "챕터 간 내용이 자연스럽게 이어지나요?" },
+  { key: "문장자연스러움",   label: "글이 자연스럽게 읽히나요?" },
+  { key: "제목목차전달력",   label: "제목과 목차를 봤을 때 이 자서전이 잘 전달된다고 느껴지나요?" },
 ];
 
 const STAR_LABELS = ["매우 아니다", "아니다", "보통이다", "그렇다", "매우 그렇다"];
 
 function SurveyForm() {
-  const [ratings, setRatings]     = useState<number[]>(Array(SURVEY_QUESTIONS.length).fill(0));
+  const [ratings, setRatings]     = useState<Record<string, number>>(
+    Object.fromEntries(SURVEY_QUESTIONS.map((q) => [q.key, 0]))
+  );
   const [freeText, setFreeText]   = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const allAnswered = ratings.every((r) => r > 0);
+  const allAnswered = Object.values(ratings).every((r) => r > 0);
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -59,24 +63,24 @@ function SurveyForm() {
 
       <div className="space-y-8">
         {SURVEY_QUESTIONS.map((q, qi) => (
-          <div key={qi} className="border-b border-gray-100 pb-7 last:border-0">
+          <div key={q.key} className="border-b border-gray-100 pb-7 last:border-0">
             <div className="flex gap-3 mb-4">
               <span className="text-xs font-bold text-emerald-500 bg-emerald-50 rounded-full w-6 h-6 flex items-center justify-center shrink-0 mt-0.5">
                 {qi + 1}
               </span>
-              <p className="text-sm font-medium text-gray-800 leading-relaxed">{q}</p>
+              <p className="text-sm font-medium text-gray-800 leading-relaxed">{q.label}</p>
             </div>
             <div className="flex items-center gap-2 pl-9">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
                   key={star}
-                  onClick={() => setRatings((prev) => { const next = [...prev]; next[qi] = star; return next; })}
+                  onClick={() => setRatings((prev) => ({ ...prev, [q.key]: star }))}
                   className="flex flex-col items-center gap-1 group"
                 >
                   <Star
                     size={28}
                     className={
-                      star <= ratings[qi]
+                      star <= ratings[q.key]
                         ? "text-yellow-400 fill-yellow-400"
                         : "text-gray-200 group-hover:text-yellow-200 group-hover:fill-yellow-100 transition-colors"
                     }
@@ -84,9 +88,9 @@ function SurveyForm() {
                   <span className="text-[10px] text-gray-400 hidden sm:block">{star}</span>
                 </button>
               ))}
-              {ratings[qi] > 0 && (
+              {ratings[q.key] > 0 && (
                 <span className="ml-2 text-xs text-gray-400 italic">
-                  {STAR_LABELS[ratings[qi] - 1]}
+                  {STAR_LABELS[ratings[q.key] - 1]}
                 </span>
               )}
             </div>

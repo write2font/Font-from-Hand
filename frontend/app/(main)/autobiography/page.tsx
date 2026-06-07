@@ -7,7 +7,7 @@ import axios from "axios";
 import api from "@/app/lib/axios";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
-type Step = "intro" | "info" | "image" | "questions" | "followup" | "keyword" | "generating";
+type Step = "intro" | "info" | "image" | "questions" | "keyword" | "generating";
 
 interface RecordingState {
   status: "idle" | "recording" | "done";
@@ -18,8 +18,8 @@ interface RecordingState {
 
 interface Question {
   num: number;
-  category: string;
   text: string;
+  hint?: string;
   conditionalOn?: number;
 }
 
@@ -29,85 +29,291 @@ interface FreeEntry {
   transcription: string;
 }
 
-// ── Question Sets ──────────────────────────────────────────────────────────────
-const QUESTIONS_20S: Question[] = [
-  { num: 1, category: "어린 날의 장소",        text: "어릴 때 가장 자주 가셨던 장소가 어디셨나요? 그곳이 왜 좋으셨나요?" },
-  { num: 2, category: "유년의 맛",              text: "어릴 때 집에서 자주 드시던 음식이나 냄새 중 지금도 기억에 남는 것이 있으신가요?" },
-  { num: 3, category: "학교 생활",              text: "학창 시절 공부 외에 가장 열정적으로 하셨던 것이 무엇인가요?" },
-  { num: 4, category: "오래된 인연",            text: "지금 가장 친하게 지내는 사람을 처음 만났던 순간이 기억나시나요?" },
-  { num: 5, category: "어린 시절의 꿈",         text: "어릴 때 어떤 사람이 되고 싶으셨나요? 지금의 모습과 어떻게 연결되나요?" },
-  { num: 6, category: "버티던 시절",            text: "지금까지 무언가를 위해 정말 고생하거나 밤새워 매달리셨던 경험이 있으신가요?" },
-  { num: 7, category: "내가 제일 빛났을 때",    text: "주변 사람에게 자랑하고 싶었던 순간이 있으신가요?" },
-  { num: 8, category: "나에게 영향을 준 사람",  text: "지금까지 살면서 나에게 가장 큰 영향을 준 사람은 누구인가요? 어떤 영향을 받으셨나요?" },
-  { num: 9, category: "앞으로의 나",            text: "10년 뒤, 어떤 모습이면 좋겠다고 생각하시나요?" },
-];
+interface ImageItem {
+  file: File;
+  period: string;
+  memo: string;
+}
 
-const QUESTIONS_3040S: Question[] = [
-  { num: 1,  category: "어린 날의 장소",      text: "어릴 때 가장 기억에 남는 장소나 풍경이 있으신가요?" },
-  { num: 2,  category: "학교 생활",            text: "학창 시절 가장 열정적으로 하셨던 것이 무엇인가요?" },
-  { num: 3,  category: "첫 도전",              text: "20대에 처음으로 혼자서 해내셨던 일이 기억나시나요?" },
-  { num: 4,  category: "소중한 인연",          text: "가장 오래 함께하신 동료나 친구가 계신가요? 어떻게 친해지셨나요?" },
-  { num: 5,  category: "삶의 전환점",          text: "지금과 전혀 다른 길을 갈 뻔했던 순간이 있으신가요?" },
-  { num: 6,  category: "만약에",               text: "만약 그 선택을 하지 않으셨다면, 지금은 어떤 모습일 것 같으세요?", conditionalOn: 4 },
-  { num: 7,  category: "버티던 시절",          text: "일이나 삶에서 가장 고되고 버거우셨던 시기는 언제였나요? 어떻게 버티셨나요?" },
-  { num: 8,  category: "내가 제일 빛났을 때",  text: "일이나 생활에서 가장 뿌듯하셨던 순간은 언제인가요?" },
-  { num: 9,  category: "가족과 함께",          text: "가족과 함께 가장 기억에 남는 순간이 있으신가요?" },
-  { num: 10, category: "인생 철학",            text: "살면서 꼭 지키려 하셨던 원칙이 있으신가요?" },
-  { num: 11, category: "앞으로의 꿈",          text: "앞으로 가장 해보고 싶으신 것이 있으신가요?" },
-];
+const IMAGE_PERIODS = ["어린 시절", "학창시절", "청년기", "직장·사회생활", "결혼·가정·육아", "현재"] as const;
 
-const QUESTIONS_5060S: Question[] = [
-  { num: 1,  category: "어린 날의 장소",      text: "어릴 때 가장 자주 가셨던 장소가 어디인가요? 그곳이 왜 기억에 남으시나요?" },
-  { num: 2,  category: "유년의 맛",            text: "어릴 때 집에서 자주 드시던 음식 중 지금도 생각나는 게 있으신가요?" },
-  { num: 3,  category: "학교 생활",            text: "학창 시절 가장 열정적으로 하셨던 것이 무엇인가요?" },
-  { num: 4,  category: "첫 사회생활",          text: "처음 사회에 나오셨을 때 어떤 일을 하셨나요? 그때 기억이 나시나요?" },
-  { num: 5,  category: "오래된 인연",          text: "지금까지 가장 오래 함께한 친구나 동료가 계신가요? 어떻게 인연이 되셨나요?" },
-  { num: 6,  category: "삶의 전환점",          text: "지금과 전혀 다른 길을 갈 뻔했던 순간이 있으신가요?" },
-  { num: 7,  category: "만약에",               text: "만약 그 선택을 하지 않으셨다면 지금은 어떤 모습일 것 같으세요?", conditionalOn: 5 },
-  { num: 8,  category: "버티던 시절",          text: "가장 고되고 버티기 힘드셨던 시기가 언제였나요? 어떻게 견디셨나요?" },
-  { num: 9,  category: "내가 제일 빛났을 때",  text: "일이나 삶에서 가장 뿌듯하셨던 순간을 하나 꼽아주실 수 있으신가요?" },
-  { num: 10, category: "인생 철학",            text: "살면서 꼭 지키려 하셨던 원칙이 있으신가요?" },
-  { num: 11, category: "앞으로의 나",          text: "앞으로 가장 해보고 싶으신 것이 있으신가요?" },
-];
+// ── Question Pool (text + hint만, num 없음) ────────────────────────────────────
+type QBase = Omit<Question, "num">;
 
-const QUESTIONS_70PLUS: Question[] = [
-  { num: 1,  category: "고향의 기억",          text: "고향이 어디이신가요? 어릴 때 고향의 풍경이나 냄새 중 지금도 기억에 남는 것이 있으신가요?" },
-  { num: 2,  category: "유년의 맛",            text: "어릴 때 집에서 자주 드시던 음식이 무엇인가요? 그 맛이 아직도 기억나시나요?" },
-  { num: 3,  category: "아끼던 것",            text: "어린 시절 가장 아끼셨던 물건이나 장소가 있으신가요?" },
-  { num: 4,  category: "학교 생활",            text: "학창 시절 가장 좋아하셨던 과목이나 활동이 있으신가요?" },
-  { num: 5,  category: "첫 사회생활",          text: "처음 사회에 나오셨을 때가 기억나시나요? 어떤 일을 하셨나요?" },
-  { num: 6,  category: "버티던 시절",          text: "그 시절 가장 고생하거나 버티기 어려우셨던 순간이 있으신가요?" },
-  { num: 7,  category: "오래된 인연",          text: "살면서 꼭 한 번 고맙다고 전하고 싶은 분이 계신가요? 그분은 어떤 분이셨나요?" },
-  { num: 8,  category: "내가 제일 빛났을 때",  text: "인생에서 가장 잘하셨다고 생각하시는 일을 하나 꼽아주실 수 있으신가요?" },
-  { num: 9,  category: "만약에",               text: "만약 그 선택을 하지 않으셨다면 지금의 삶이 어떻게 달랐을 것 같으세요?", conditionalOn: 7 },
-  { num: 10, category: "인생 철학",            text: "평생 지켜오신 나만의 원칙이나 좌우명이 있으신가요?" },
-  { num: 11, category: "젊은이에게",           text: "지금 젊은 분들에게 꼭 하고 싶으신 말씀이 있으신가요?" },
-];
-
-const QUESTION_HINTS: Record<string, string> = {
-  "어린 날의 장소":        "예: 동네 뒷산 약수터였어요. 초등학교 때 친구들이랑 매일 거기서 놀았는데, 바위에 앉아 도시락 먹던 기억이 아직도 선해요. 친구 이름이나 그때 무엇을 했는지도 이야기해 주세요.",
-  "고향의 기억":           "예: 경북 안동이요. 하회마을 근처 논 냄새, 여름에 모깃불 피우던 기억이 나요. 마당에 평상 놓고 수박 먹던 것도요. 고향의 어떤 장면이 가장 먼저 떠오르시나요?",
-  "유년의 맛":             "예: 어머니가 겨울마다 끓여주시던 팥죽이요. 그 냄새가 나면 겨울이 왔다고 느꼈어요. 어떤 음식인지, 누가 만들어 줬는지, 어떤 맛이었는지 구체적으로 말씀해 주세요.",
-  "아끼던 것":             "예: 할아버지한테 물려받은 작은 칼이요. 공책에 싸서 늘 가지고 다녔어요. 왜 그게 소중했는지, 지금도 갖고 있는지도 이야기해 주세요.",
-  "학교 생활":             "예: 합창부였어요. 매일 방과 후 한 시간씩 연습했고, 3학년 때 전국대회에서 금상 받았을 때 선생님이 우셨어요. 어떤 활동을 했는지, 기억에 남는 순간도 함께 말씀해 주세요.",
-  "어린 시절의 꿈":        "예: 의사가 되고 싶었어요. 드라마 속 의사가 멋있어 보여서요. 지금은 완전 다른 일을 하지만, 그 꿈이 언제 바뀌었는지도 기억나시면 말씀해 주세요.",
-  "첫 사회생활":           "예: 공장 경리로 첫 출근한 날이요. 교복 입다가 처음으로 정장 입었는데 너무 어색했어요. 몇 살 때였는지, 어떤 일을 했는지, 첫날 어땠는지 이야기해 주세요.",
-  "첫 도전":               "예: 처음으로 혼자 서울 올라가서 면접 본 날이요. 기차표 살 때 손이 떨렸어요. 왜 그 도전을 했는지, 결과가 어땠는지도 말씀해 주세요.",
-  "오래된 인연":           "예: 중학교 입학날 옆자리에 앉았던 친구예요. 처음 말을 걸었던 계기가 뭔지, 지금도 연락하는지, 어떤 추억이 있는지 이야기해 주세요.",
-  "소중한 인연":           "예: 입사 첫날 밥 사줬던 선배예요. 그분이 어떤 분이었는지, 어떻게 친해졌는지, 함께한 기억 중 하나를 골라 이야기해 주세요.",
-  "삶의 전환점":           "예: 30살에 회사 그만두고 가게 차렸을 때요. 가족들이 다 반대했는데 결국 했어요. 왜 그 선택을 했는지, 그 후 어떻게 됐는지 말씀해 주세요.",
-  "만약에":                "예: 그때 그냥 회사 다녔으면 지금쯤 팀장은 됐겠죠. 근데 후회는 없어요. 지금 생각으로 그 선택이 맞았다고 보시는지도 이야기해 주세요.",
-  "버티던 시절":           "예: 셋째 낳고 일까지 병행하던 3년이요. 잠을 4시간도 못 잔 것 같아요. 어떻게 견디셨는지, 그때 힘이 됐던 것이 있었는지도 말씀해 주세요.",
-  "내가 제일 빛났을 때":   "예: 팀장 됐을 때요. 아무도 안 믿어줬는데 제가 직접 설득해서 만든 프로젝트였거든요. 그 순간이 왜 특별했는지, 어떤 기분이었는지 이야기해 주세요.",
-  "나에게 영향을 준 사람": "예: 고등학교 3학년 담임 선생님이요. 포기하려던 저한테 '넌 할 수 있다'고 하셨는데, 그 말이 지금도 생각나요. 어떤 영향을 받으셨는지 구체적으로 말씀해 주세요.",
-  "가족과 함께":           "예: 첫째 돌잔치 날이요. 온 가족이 다 모였고, 아이가 실을 잡았어요. 그 자리에 누가 있었는지, 어떤 분위기였는지도 이야기해 주세요.",
-  "인생 철학":             "예: '남한테 폐 끼치지 말자'는 게 신조예요. 어머니한테 들은 말인데 평생 지키고 있어요. 그 원칙이 언제부터였는지, 지키기 어려웠던 순간도 있었나요?",
-  "앞으로의 나":           "예: 매일 새벽 수영 다니고, 여행 한 달에 한 번씩 다니고 싶어요. 10년 뒤 어떤 모습이면 좋을지, 지금과 뭐가 달라지길 바라는지 이야기해 주세요.",
-  "앞으로의 꿈":           "예: 손자들 데리고 제주도 한 달 살기 해보고 싶어요. 꼭 해보고 싶은 것이 있으시면 왜 그게 하고 싶은지도 함께 말씀해 주세요.",
-  "젊은이에게":            "예: 지금 힘든 게 다 쌓여서 나중에 자랑거리가 돼요. 버티세요. 살면서 배운 것 중 가장 중요하다고 생각하는 것을 솔직하게 말씀해 주세요.",
+// Q1: 이름
+const QP_NAME: QBase = {
+  text: "어릴 적 이름의 뜻을 알고 계신가요? 누가 지어주셨는지 혹시 들으신 적 있으신가요?",
+  hint: "예: 이름에 '빛날 환'자가 들어간다고 들었어요. 할아버지가 직접 지어주셨다는데, 별명은 전혀 달랐어요…",
 };
 
-function getQuestions(birthDate: string): Question[] {
+// Q2: 살던 집 · 동네
+const QP_HOME_Y: QBase = {
+  text: "어릴 때 살던 집이나 동네는 어떤 모습이었나요? 기억에 남는 장면이 있으신가요?",
+  hint: "예: 골목 안쪽 작은 집이었는데, 대문 앞에 큰 나무가 있었어요. 여름에 그 그늘에서 친구들이랑 자주 놀았고…",
+};
+const QP_HOME_S: QBase = {
+  text: "예전에 사셨던 집은 어떤 모습이었나요? 마당이나 부엌도 기억나시나요?",
+  hint: "예: 대문 들어서면 큰 마당이 있었고, 우물도 있었어요. 부엌은 아궁이가 있어서 겨울에 거기 앉으면 너무 따뜻했어요…",
+};
+
+// Q3: 부모님
+const QP_PARENTS_Y: QBase = {
+  text: "부모님은 어떤 분들이셨나요? 지금도 기억에 남는 모습이 있으신가요?",
+  hint: "예: 아버지는 말씀이 많지 않으셨는데 새벽마다 일찍 일어나셨어요. 어머니는 항상 무언가를 만드시는 분이셨고…",
+};
+const QP_PARENTS_S: QBase = {
+  text: "부모님은 어떤 분들이셨나요? 어떤 일을 하셨고, 성격은 어떠셨나요?",
+  hint: "예: 아버지는 말씀이 적으셨지만 새벽마다 일어나 논에 나가셨어요. 어머니는 노래를 잘 하셔서 일하시면서 항상 흥얼거리셨죠…",
+};
+
+// Q4: 형제자매
+const QP_SIBLINGS_Y: QBase = {
+  text: "형제자매가 있으신가요? 함께 자라면서 기억에 남는 일이 있으신가요?",
+  hint: "예: 오빠가 한 명 있었는데 맨날 싸우면서도 학교는 항상 같이 다녔어요. 지금 생각하면 그 시절이 제일 좋았던 것 같아요…",
+};
+const QP_SIBLINGS_S: QBase = {
+  text: "형제자매가 몇 분이셨나요? 그중 제일 친하셨던 분 이야기도 해주세요.",
+  hint: "예: 다섯 남매였는데 제가 셋째였어요. 첫째 언니가 항상 저를 챙겨줬는데, 지금 생각하면 그게 얼마나 고마운 일인지…",
+};
+
+// Q5: 초등학교
+const QP_ELEMENTARY_Y: QBase = {
+  text: "초등학교 시절 이야기를 들려주세요. 좋아하셨던 선생님이나 친구, 즐겨 하시던 놀이가 있으셨나요?",
+  hint: "예: 미술 선생님이 제 그림을 칠판에 붙여주셨는데 그게 너무 기뻤어요. 하굣길에 친구들이랑 구슬치기 하던 것도 생각나고…",
+};
+const QP_ELEMENTARY_S: QBase = {
+  text: "초등학교 시절 이야기를 들려주세요. 학교까지 어떻게 다니셨고, 좋아하셨던 선생님이나 친구들 이야기가 있으신가요?",
+  hint: "예: 4킬로를 걸어서 다녔어요. 한문 선생님이 칠판에 글씨 쓰시던 모습이 아직도 눈에 선해요. 도시락 나눠 먹던 친구도 생각나고…",
+};
+
+// Q6: 중학교
+const QP_MIDDLE_Y: QBase = {
+  text: "중학교 시절로 돌아가 보면 어떤 모습이 먼저 떠오르시나요? 그때 가장 가깝게 지내셨던 친구나 인상에 남은 선생님이 있으셨나요?",
+  hint: "예: 중학교 때 처음으로 진짜 친한 친구가 생겼어요. 그 친구랑 매일 같이 하굣길을 걸었는데, 체육 선생님도 유독 기억에 남고…",
+};
+const QP_MIDDLE_S: QBase = {
+  text: "중학교 시절로 돌아가 보면 어떤 모습이 먼저 떠오르시나요? 가깝게 지내셨던 친구나 선생님이 있으셨나요?",
+  hint: "예: 그 시절엔 학교까지 멀었는데도 친구들이랑 같이 다니니까 멀게 느껴지지 않았어요. 선생님 기억도 선하고…",
+};
+
+// Q7: 고등학교
+const QP_HIGH_Y: QBase = {
+  text: "고등학교 때는 어떠셨나요? 공부, 진로 고민, 혹은 그 시절 푹 빠지셨던 것이 있으셨나요?",
+  hint: "예: 입시 압박이 심했는데 그래도 점심시간에 친구들이랑 놀던 기억이 제일 선해요. 야간자율학습 끝나고 편의점 가던 것도…",
+};
+const QP_HIGH_S: QBase = {
+  text: "고등학교 시절은 어떠셨나요? 힘드셨던 점이나 반대로 신나셨던 기억이 있으신가요?",
+  hint: "예: 집이 멀어서 학교 근처 하숙을 했는데 처음으로 혼자 지내는 게 외롭기도 하고 자유롭기도 했어요…",
+};
+
+// Q8: 꿈 · 장래희망
+const QP_DREAM_Y: QBase = {
+  text: "어릴 때 어떤 꿈이나 장래희망을 가지고 계셨나요? 그 꿈은 어디서 생겨났나요?",
+  hint: "예: 수의사가 되고 싶었는데, 동물을 무척 좋아했어요. 그 꿈이 나중에 어떻게 됐는지도 이야기해 주세요…",
+};
+const QP_DREAM_S: QBase = {
+  text: "어릴 때 어떤 꿈이나 장래희망을 가지고 계셨나요? 그 꿈은 어떻게 됐나요?",
+  hint: "예: 선생님이 되고 싶었는데 형편이 여의치 않아 다른 길을 걸었어요. 그 꿈이 지금의 삶 어딘가에 남아있는 것 같기도 하고…",
+};
+
+// ── 군복무 질문 ────────────────────────────────────────────────────────────────
+const Q_MILITARY_20S: Question = {
+  text: "군 복무를 하셨거나 하고 계신가요? 군 생활 중 마음에 남는 순간이나 전우 이야기를 들려주세요.",
+  hint: "예: 자대 배치 받고 나서 처음으로 혼자라는 걸 실감했어요. 같이 야간 보초를 서던 전우 이야기도 아직 생각나고…",
+} as unknown as Question;
+
+const Q_MILITARY_SENIOR: Question = {
+  text: "군 복무를 하셨나요? 훈련소 시절이나 자대에서 있었던 일, 함께하셨던 전우 이야기를 들려주세요.",
+  hint: "예: 논산 훈련소에서 처음 삭발할 때 눈물이 날 뻔했어요. 야간 보초 서면서 별을 보며 전우랑 이야기 많이 했죠…",
+} as unknown as Question;
+
+// ── 대학 시절 질문 2개 (학력 선택 시 조건부 삽입) ──────────────────────────
+const Q_COLLEGE_1: Question = {
+  text: "대학에 진학하셨을 때 전공은 어떻게 선택하게 됐나요? 처음 캠퍼스에 들어서시던 날이 떠오르시나요?",
+  hint: "예: 처음엔 다른 전공을 생각했는데 우연한 계기로 이쪽에 오게 됐어요. 첫날 강의실 찾다가 길을 잃었던 게 생각나고…",
+} as unknown as Question;
+
+const Q_COLLEGE_2: Question = {
+  text: "대학 시절 가장 빠져드셨던 것이 있으셨나요? 동아리, 교수님, 친구들과의 이야기가 있다면 들려주세요.",
+  hint: "예: 밴드 동아리에 들어갔는데 거기서 평생 친구를 만났어요. 특별히 영향받은 교수님이나 수업이 있었는지도요…",
+} as unknown as Question;
+
+// ── 20대 (Q1-Q8 공통 + Q9-Q16) ───────────────────────────────────────────────
+const QUESTIONS_20S: Question[] = [
+  { num: 1,  ...QP_NAME },
+  { num: 2,  ...QP_HOME_Y },
+  { num: 3,  ...QP_PARENTS_Y },
+  { num: 4,  ...QP_SIBLINGS_Y },
+  { num: 5,  ...QP_ELEMENTARY_Y },
+  { num: 6,  ...QP_MIDDLE_Y },
+  { num: 7,  ...QP_HIGH_Y },
+  { num: 8,  ...QP_DREAM_Y },
+  { num: 9,  text: "처음으로 혼자서 뭔가를 해내셨던 경험이 있으신가요? 어떤 도전이었고, 힘드셨던 부분도 있으셨나요?",
+    hint: "예: 처음 혼자 기차 타고 여행 간 날이요. 표 끊는 것도 서툴렀고 포기하고 싶은 순간도 있었는데, 막상 해보니 할 수 있더라고요…" },
+  { num: 10, text: "지금 하고 계신 일이나 공부는 어떻게 선택하게 됐나요? 어떤 계기가 있으셨나요?",
+    hint: "예: 사실 처음엔 전혀 다른 걸 생각했는데, 어느 날 우연히 접하고 나서 방향이 바뀌었어요. 그때 어떤 생각이었는지도요…" },
+  { num: 11, text: "그 일이나 공부에서 '내가 잘하고 있구나' 싶었던 순간이 있으신가요?",
+    hint: "예: 처음 혼자 뭔가를 끝냈을 때요. 결과물이 작아도 뭔가 해냈다는 느낌이 그렇게 뿌듯할 수가 없었어요…" },
+  { num: 12, text: "연애 이야기를 들려주세요. 첫사랑이나 지금 곁에 계신 분이 있으신가요?",
+    hint: "예: 첫사랑은 중학교 때였는데 말 한마디 못 해봤어요. 지금 사귀는 분이 있다면 어떻게 만나셨는지도 이야기해 주세요…" },
+  { num: 13, text: "요즘 푹 빠져계신 취미나 꼭 해보고 싶으신 것이 있으신가요?",
+    hint: "예: 요즘 필름 카메라에 빠졌는데, 혼자 사진 찍으러 나가는 시간이 제일 좋아요. 아니면 언젠가 꼭 해보고 싶은 것도요…" },
+  { num: 14, text: "나에게 가장 큰 영향을 주신 분은 누구인가요? 어떤 영향을 받으셨나요?",
+    hint: "예: 고2 담임 선생님이요. 그분이 하신 말 한마디가 지금도 방향을 잡아줄 때가 있어요…" },
+  { num: 15, text: "지금 가장 고민되거나 마음에 걸리는 게 있으신가요?",
+    hint: "예: 진로 방향이 맞는 건지 자꾸 흔들려요. 관계나 앞으로의 삶에 대해 고민하는 것도 이야기해 주셔도 돼요…" },
+  { num: 16, text: "10년 뒤 어떤 모습이면 좋겠나요? 꼭 해보고 싶으신 일이 있으신가요?",
+    hint: "예: 하고 싶은 일로 먹고살 수 있으면 좋겠어요. 거창한 게 아니라 그냥 좋아하는 것 하면서 지내는 삶…" },
+];
+
+// ── 30~40대 (Q1-Q8 공통 + Q9-Q19) ───────────────────────────────────────────
+const QUESTIONS_3040S: Question[] = [
+  { num: 1,  ...QP_NAME },
+  { num: 2,  ...QP_HOME_Y },
+  { num: 3,  ...QP_PARENTS_Y },
+  { num: 4,  ...QP_SIBLINGS_Y },
+  { num: 5,  ...QP_ELEMENTARY_Y },
+  { num: 6,  ...QP_MIDDLE_Y },
+  { num: 7,  ...QP_HIGH_Y },
+  { num: 8,  ...QP_DREAM_Y },
+  { num: 9,  text: "처음 사회에 나오셨을 때 어떤 일을 하셨나요? 첫 직장이나 첫 면접 이야기가 있으신가요?",
+    hint: "예: 첫 면접 보러 정장을 처음 맞췄어요. 입사 첫날 어디서 밥을 먹어야 할지 몰라서 혼자 편의점에서…" },
+  { num: 10, text: "일하면서 가장 고됐던 시기가 언제였나요? 그때 어떻게 버티셨나요?",
+    hint: "예: 연속으로 야근하던 그 해가 제일 힘들었어요. 아무것도 안 되는 것 같았는데, 그래도 버틸 수 있었던 건…" },
+  { num: 11, text: "커리어에서 가장 뿌듯하셨던 성취나 순간을 꼽아주세요.",
+    hint: "예: 몇 년을 준비한 프로젝트가 처음으로 결실을 맺던 날이요. 그날 퇴근길이 유난히 가볍게 느껴졌어요…" },
+  { num: 12, text: "지금 하시는 일이나 커리어 방향에 대해 이야기해 주세요. 어떻게 여기까지 오게 됐나요?",
+    hint: "예: 처음 생각했던 길이랑 많이 달라졌어요. 돌아보면 그 변화들이 어떤 의미가 있는지…" },
+  { num: 13, text: "연애·결혼 이야기를 들려주세요. 배우자나 파트너를 어떻게 만나셨나요?",
+    hint: "예: 회사 동료였는데 야근하다가 처음 제대로 이야기를 나눴어요. 그날 이후로 자연스럽게 친해졌고…" },
+  { num: 14, text: "가정을 꾸리면서 달라진 점이 있으신가요? 자녀 분이 계신다면 아이 이야기도 들려주세요.",
+    hint: "예: 아이가 생기고 나서 우선순위가 완전히 바뀌었어요. 처음 안았을 때 그 느낌이 아직도 생생해요…" },
+  { num: 15, text: "지금과 전혀 다른 길을 가실 뻔하셨던 순간이 있으신가요?",
+    hint: "예: 서른 살에 회사 그만두고 유학을 갈까 진지하게 고민했어요. 결국 남기로 했는데, 그 선택이 맞았는지…" },
+  { num: 16, text: "만약 그 선택을 하지 않으셨다면, 지금은 어떤 모습일 것 같으세요?",
+    hint: "예: 유학 갔으면 지금 전혀 다른 사람이 됐을 것 같아요. 후회는 없지만 가끔 상상해보게 돼요…",
+    conditionalOn: 15 },
+  { num: 17, text: "요즘 즐기시는 취미나 꼭 해보고 싶으신 것이 있으신가요?",
+    hint: "예: 주말마다 등산을 다니는데 그 시간이 제일 저만의 시간이에요. 언젠가 꼭 해보고 싶은 것도 있으시면요…" },
+  { num: 18, text: "살면서 꼭 지키려 하셨던 원칙이나 가치관이 있으신가요?",
+    hint: "예: '내가 한 말은 꼭 지킨다'는 게 오래된 원칙이에요. 그게 흔들린 순간도 있었는데, 그때가 생각나요…" },
+  { num: 19, text: "앞으로 가장 해보고 싶으신 것이 있으신가요? 10년 뒤 어떤 모습이면 좋겠나요?",
+    hint: "예: 가족이랑 오래 여행을 해보고 싶어요. 10년 뒤엔 지금보다 조금 더 여유 있는 사람이면 좋겠고…" },
+];
+
+// ── 50~60대 (Q1-Q8 시니어 공통 + Q9-Q23) ────────────────────────────────────
+const QUESTIONS_5060S: Question[] = [
+  { num: 1,  ...QP_NAME },
+  { num: 2,  ...QP_HOME_S },
+  { num: 3,  ...QP_PARENTS_S },
+  { num: 4,  ...QP_SIBLINGS_S },
+  { num: 5,  ...QP_ELEMENTARY_S },
+  { num: 6,  ...QP_MIDDLE_S },
+  { num: 7,  ...QP_HIGH_S },
+  { num: 8,  ...QP_DREAM_S },
+  { num: 9,  text: "처음 사회에 나오셨을 때 어떤 일을 하셨나요? 첫 출근이나 첫 직장 이야기를 들려주세요.",
+    hint: "예: 공장 경리로 첫 출근한 날이요. 교복 입다가 처음으로 정장 입었는데 너무 어색했어요…" },
+  { num: 10, text: "일하면서 가장 고됐던 시기가 언제였나요? 그때 어떻게 버티셨나요?",
+    hint: "예: 사업이 어려웠던 몇 년이요. 가족한테 내색도 못하고 혼자 버텼는데, 그때 힘이 됐던 건…" },
+  { num: 11, text: "일이나 커리어에서 가장 뿌듯하셨던 성취나 순간이 있으신가요?",
+    hint: "예: 몇 년을 갈고닦은 일이 인정받던 날이요. 아니면 후배들이 잘 성장하는 걸 지켜봤을 때도요…" },
+  { num: 12, text: "지금까지 가장 오래 함께하신 친구나 동료가 계신가요? 어떻게 인연이 됐나요?",
+    hint: "예: 입사 첫날 밥 사줬던 선배예요. 그분이 어떤 분이었는지, 어떻게 친해졌는지 이야기해 주세요…" },
+  { num: 13, text: "배우자 분은 어떻게 만나셨나요? 연애였는지 중매였는지도 궁금해요.",
+    hint: "예: 동네 친구 결혼식에서 처음 봤어요. 한눈에 알아봤는지 자꾸 눈이 마주쳤죠…" },
+  { num: 14, text: "결혼식 하셨을 때 이야기를 들려주세요. 긴장됐던 순간이나 재미난 에피소드가 있으셨나요?",
+    hint: "예: 결혼식 날 너무 긴장해서 주례 말씀이 하나도 안 들렸어요. 피로연에서 어머니가 우셨는데 그게 지금도 생각나요…" },
+  { num: 15, text: "자녀들이 어릴 때 이야기를 해주세요. 육아하면서 가장 힘드셨던 때도 함께 들려주시겠어요?",
+    hint: "예: 첫째 낳던 날 너무 기뻐서 울었어요. 그런데 밤새 울어대던 때는 정말 한계였죠. 그때 어떻게 버티셨는지도요…" },
+  { num: 16, text: "'이제 우리 아이가 다 컸구나' 하고 느끼셨던 순간이 언제였나요?",
+    hint: "예: 고등학교 졸업식 날 양복 입은 아들 보고 '이제 어른이 됐구나' 싶었어요. 어느 순간 그런 느낌이 드셨나요?…" },
+  { num: 17, text: "살아오시면서 가장 큰 위기가 있으셨다면 어떤 시기였나요? 어떻게 넘기셨나요?",
+    hint: "예: 경제적으로 제일 어려웠던 시기가 있었어요. 아니면 건강이나 가족 때문에 힘드셨던 적도요…" },
+  { num: 18, text: "건강 면에서 달라지심을 느끼신 건 언제부터였나요?",
+    hint: "예: 마흔 넘어서 갑자기 체력이 예전 같지 않다는 걸 느꼈어요. 그때부터 뭔가 챙기시게 된 것도 있으신가요…" },
+  { num: 19, text: "요즘 즐기시는 취미나 빠져계신 것이 있으신가요?",
+    hint: "예: 텃밭 가꾸는 게 요즘 낙이에요. 아니면 예전부터 꼭 해보고 싶었는데 이제야 하게 된 것도요…" },
+  { num: 20, text: "요즘 하루하루를 어떻게 보내고 계신가요? 가장 즐거우신 시간이 있으신가요?",
+    hint: "예: 새벽에 산책하는 게 요즘 낙이에요. 그 시간에 무슨 생각을 하시는지도 이야기해 주세요…" },
+  { num: 21, text: "살면서 가장 중요하게 지켜오신 가치나 마음가짐이 있으셨나요?",
+    hint: "예: '남한테 폐 끼치지 말자'는 게 신조예요. 어머니한테 들은 말인데 평생 지키고 있어요…" },
+  { num: 22, text: "앞으로 가장 해보고 싶으신 것이 있으신가요?",
+    hint: "예: 손자들 데리고 제주도 한 달 살기 해보고 싶어요. 아직 못 이룬 꿈이 있으시면 이야기해 주세요…" },
+  { num: 23, text: "자녀나 소중한 분께 꼭 남기고 싶은 말이 있다면요?",
+    hint: "예: 말로는 잘 못 했는데, 늘 고맙고 자랑스럽다는 걸 전하고 싶어요…" },
+];
+
+// ── 70대 이상 (Q1-Q8 시니어 공통 + Q9-Q26) ───────────────────────────────────
+const QUESTIONS_70PLUS: Question[] = [
+  { num: 1,  ...QP_NAME },
+  { num: 2,  ...QP_HOME_S },
+  { num: 3,  ...QP_PARENTS_S },
+  { num: 4,  ...QP_SIBLINGS_S },
+  { num: 5,  ...QP_ELEMENTARY_S },
+  { num: 6,  ...QP_MIDDLE_S },
+  { num: 7,  ...QP_HIGH_S },
+  { num: 8,  ...QP_DREAM_S },
+  { num: 9,  text: "사회에 처음 나가셨을 때 어떤 일을 하셨나요? 그때 이야기 들려주세요.",
+    hint: "예: 공장에서 일을 시작했는데 첫날 기계 소리에 너무 놀랐어요. 그 시절 동료 이야기도 생각나시면요…" },
+  { num: 10, text: "일하면서 가장 고됐던 시기가 언제였나요? 그때 어떻게 버티셨나요?",
+    hint: "예: 가장 힘들었던 그 시절, 가족한테 내색도 못하고 혼자 버텼어요. 그래도 버틸 수 있었던 건…" },
+  { num: 11, text: "일하시면서 가장 뿌듯하셨던 성취나 보람 있으셨던 순간이 있으신가요?",
+    hint: "예: 평생 일하면서 가장 잘했다고 생각하는 것, 혹은 인정받으셨던 기억이 있으시면요…" },
+  { num: 12, text: "배우자 분은 어떻게 만나셨나요? 연애였는지 중매였는지도 궁금해요.",
+    hint: "예: 동네 친구 결혼식에서 처음 봤어요. 한눈에 알아봤는지 자꾸 눈이 마주쳤죠…" },
+  { num: 13, text: "결혼식 하셨을 때 이야기를 들려주세요. 긴장됐던 순간이나 재미난 에피소드가 있으셨나요?",
+    hint: "예: 결혼식 날 너무 긴장해서 주례 말씀이 하나도 안 들렸어요. 피로연에서 어머니가 우셨는데 그게 지금도 생각나요…" },
+  { num: 14, text: "아이들 낳으셨을 때 첫 느낌이 어떠셨는지 들려주세요.",
+    hint: "예: 첫째 낳던 날 남편이 병원 복도에서 서성이다 실신했다는 이야기를 나중에 들었어요…" },
+  { num: 15, text: "아이들 키우시면서 가장 즐거우셨던 일과 가장 힘드셨던 일이 있으셨나요?",
+    hint: "예: 밤새 기침하는 아이 등을 두드리다 보면 새벽이 됐어요. 그래도 그 시절이 지금은 가장 행복했던 것 같아요…" },
+  { num: 16, text: "'이제 우리 아이가 다 컸구나' 하고 느끼셨던 순간이 언제였나요?",
+    hint: "예: 고등학교 졸업식 날 양복 입은 아들 보고 '이제 어른이 됐구나' 싶었어요. 어느 순간 그 느낌이 드셨나요?…" },
+  { num: 17, text: "살아오시면서 가장 큰 위기가 있으셨다면 어떤 시기였나요? 어떻게 넘기셨나요?",
+    hint: "예: 경제적으로 가장 어려웠던 때, 혹은 건강이나 가족 때문에 무너질 것 같았던 시기가 있으셨나요…" },
+  { num: 18, text: "건강 면에서 달라지심을 느끼신 건 언제부터였나요?",
+    hint: "예: 예순 넘어서 갑자기 체력이 예전 같지 않다는 걸 느꼈어요. 그때부터 챙기시게 된 것들이 있으신가요…" },
+  { num: 19, text: "지금 살고 계신 동네나 집은 어떤가요? 편안하신가요?",
+    hint: "예: 30년째 이 동네 살고 있어요. 골목 어귀 느티나무가 봄에 싹이 트면 또 한 해가 시작됐구나 싶어요…" },
+  { num: 20, text: "요즘 즐기시는 취미나 낙이 있으신가요?",
+    hint: "예: 화초 가꾸는 게 요즘 낙이에요. 아니면 손주들이랑 노는 시간, 오랫동안 하고 싶었는데 이제야 하는 것도요…" },
+  { num: 21, text: "하루 일과는 보통 어떻게 보내세요? 아침엔 뭘 하시나요?",
+    hint: "예: 새벽 5시에 일어나서 라디오 듣고, 6시에 산책 나가요. 돌아와서 미음 끓여 먹고 손자들 전화 기다리는 게 요즘 낙이에요…" },
+  { num: 22, text: "살아오시면서 가장 중요하게 지켜오신 가치나 마음가짐이 있으셨나요?",
+    hint: "예: '남한테 폐 끼치지 말자'는 게 신조예요. 어머니한테 들은 말인데 평생 지키고 있어요…" },
+  { num: 23, text: "살아오면서 가장 감사하신 분이나 일이 있다면요?",
+    hint: "예: 평생 건강하게 살아온 것만으로도 감사해요. 그리고 옆에서 묵묵히 함께해준 배우자요…" },
+  { num: 24, text: "자녀나 손주에게 꼭 남기고 싶으신 말씀이 있다면요?",
+    hint: "예: '지금 이 순간을 소중히 여겨라'고 말해주고 싶어요. 내가 젊었을 때 그게 얼마나 중요한지 몰랐거든요…" },
+  { num: 25, text: "배우자에게 하고 싶으신 말씀은 무엇인가요?",
+    hint: "예: 고생 많았다는 말을 평생 제대로 못 했어요. 이 자리에서라도 말하고 싶어요…" },
+  { num: 26, text: "지금 젊은 분들에게 꼭 하고 싶으신 말씀이 있으신가요?",
+    hint: "예: 지금 힘든 게 다 쌓여서 나중에 자랑거리가 돼요. 버티세요. 살면서 배운 것 중 가장 중요하다고 생각하는 것을 솔직하게요…" },
+];
+
+
+
+function insertAfterQ(
+  base: Question[],
+  newQ: Question,
+  insertAfterNum: number
+): Question[] {
+  const insertIdx = base.findIndex((q) => q.num === insertAfterNum) + 1;
+  const before = base.slice(0, insertIdx);
+  const after = base.slice(insertIdx).map((q) => ({
+    ...q,
+    num: q.num + 1,
+    ...(q.conditionalOn !== undefined ? { conditionalOn: q.conditionalOn + 1 } : {}),
+  }));
+  return [...before, { ...newQ, num: insertAfterNum + 1 }, ...after];
+}
+
+// kept for backwards-compatibility at call sites
+const insertMilitaryQuestion = insertAfterQ;
+
+const COLLEGE_EDUCATION_VALUES = ["대학교 졸업", "대학원 이상", "대학교 재학 중"];
+
+function getQuestions(birthDate: string, militaryService: string = "", education: string = ""): Question[] {
   if (!birthDate) return QUESTIONS_3040S;
   const birth = new Date(birthDate);
   const today = new Date();
@@ -116,10 +322,27 @@ function getQuestions(birthDate: string): Question[] {
     today.getMonth() < birth.getMonth() ||
     (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())
   ) age--;
-  if (age < 30) return QUESTIONS_20S;
-  if (age < 50) return QUESTIONS_3040S;
-  if (age < 70) return QUESTIONS_5060S;
-  return QUESTIONS_70PLUS;
+
+  const military = militaryService === "군필";
+  const hasCollege = COLLEGE_EDUCATION_VALUES.includes(education);
+
+  let base: Question[];
+  let militaryQ: Question;
+  if (age < 30) { base = QUESTIONS_20S;    militaryQ = Q_MILITARY_20S; }
+  else if (age < 50) { base = QUESTIONS_3040S; militaryQ = Q_MILITARY_SENIOR; }
+  else if (age < 70) { base = QUESTIONS_5060S; militaryQ = Q_MILITARY_SENIOR; }
+  else { base = QUESTIONS_70PLUS; militaryQ = Q_MILITARY_SENIOR; }
+
+  // 대학 질문 2개를 Q8(꿈) 뒤에 삽입 (학력 해당자만)
+  if (hasCollege) {
+    base = insertAfterQ(base, Q_COLLEGE_1, 8);   // → Q9
+    base = insertAfterQ(base, Q_COLLEGE_2, 9);   // → Q10
+  }
+
+  // 군복무 질문을 대학 질문 뒤(또는 Q8 뒤)에 삽입
+  if (military) base = insertAfterQ(base, militaryQ, hasCollege ? 10 : 8);
+
+  return base;
 }
 
 function getPeriods(birthDate: string): string[] {
@@ -151,9 +374,18 @@ export default function AutobiographyPage() {
   const [name, setName]           = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [hometown, setHometown]   = useState("");
+  const [gender, setGender]       = useState<"남성" | "여성" | "">("");
+  const [education, setEducation] = useState("");
+  const [religion, setReligion]   = useState("");
 
-  // Image
-  const [images, setImages]   = useState<File[]>([]);
+  // Military service
+  const [militaryService, setMilitaryService] = useState<"군필" | "미필" | "해당없음" | "">("");
+
+  // Writing style
+  const [writingStyle, setWritingStyle] = useState<"서술체" | "경어체">("서술체");
+
+  // Image (파일 + 시기 + 메모)
+  const [images, setImages]   = useState<ImageItem[]>([]);
   const imageInputRef         = useRef<HTMLInputElement>(null);
 
   // Font selection
@@ -179,16 +411,6 @@ export default function AutobiographyPage() {
   const [currentFreeRecordIdx, setCurrentFreeRecordIdx] = useState<number | null>(null);
   const [freeTranscribing, setFreeTranscribing]     = useState(false);
 
-  // Followup
-  const [followupQuestions, setFollowupQuestions]           = useState<string[]>([]);
-  const [followupRecordings, setFollowupRecordings]         = useState<RecordingState[]>([]);
-  const [followupTranscriptions, setFollowupTranscriptions] = useState<string[]>([]);
-  const [followupTranscribing, setFollowupTranscribing]     = useState(false);
-  const [currentFIdx, setCurrentFIdx]                       = useState(0);
-  const [loadingFollowup, setLoadingFollowup]               = useState(false);
-  const [fPlaying, setFPlaying]                             = useState(false);
-  const fAudioRef                                           = useRef<HTMLAudioElement | null>(null);
-
   // Keywords
   const [keywordCandidates, setKeywordCandidates] = useState<string[]>([]);
   const [selectedKeywords, setSelectedKeywords]   = useState<string[]>([]);
@@ -212,16 +434,16 @@ export default function AutobiographyPage() {
 
   useEffect(() => () => { timerRef.current && clearInterval(timerRef.current); }, []);
 
-  // Update question set when birthDate changes
+  // Update question set when birthDate, militaryService, or education changes
   useEffect(() => {
     if (!birthDate) return;
-    const qs = getQuestions(birthDate);
+    const qs = getQuestions(birthDate, militaryService, education);
     setActiveQuestions(qs);
     setRecordings(qs.map(emptyRecording));
     setTranscriptions(Array(qs.length).fill(""));
     setCurrentQIdx(0);
     setFreeEntries([]);
-  }, [birthDate]);
+  }, [birthDate, militaryService, education]);
 
   // ── Navigation helpers ────────────────────────────────────────────────────────
   const getNextQIdx = (fromIdx: number): number => {
@@ -426,73 +648,7 @@ export default function AutobiographyPage() {
       .map((e) => `[${e.period}]\n${e.transcription}`)
       .join("\n\n");
 
-  // ── Followup 녹음 핸들러 ──────────────────────────────────────────────────────
-  const handleFStart = () => {
-    setFollowupRecordings((prev) => {
-      const a = [...prev]; a[currentFIdx] = { ...a[currentFIdx], status: "recording" }; return a;
-    });
-    startRecording((blob, url, duration) => {
-      setFollowupRecordings((prev) => { const a = [...prev]; a[currentFIdx] = { status: "done", blob, url, duration }; return a; });
-      transcribeBlob(
-        blob,
-        (text) => setFollowupTranscriptions((prev) => { const a = [...prev]; a[currentFIdx] = text; return a; }),
-        setFollowupTranscribing
-      );
-    });
-  };
-
-  const handleFReset = () => {
-    setFollowupRecordings((prev) => { const a = [...prev]; a[currentFIdx] = emptyRecording(); return a; });
-    setFollowupTranscriptions((prev) => { const a = [...prev]; a[currentFIdx] = ""; return a; });
-    setFPlaying(false);
-  };
-
-  const handleFFileUpload = (blob: Blob, url: string) => {
-    const audio = new Audio(url);
-    audio.addEventListener("loadedmetadata", () => {
-      const duration = isFinite(audio.duration) ? Math.round(audio.duration) : 0;
-      setFollowupRecordings((prev) => { const a = [...prev]; a[currentFIdx] = { status: "done", blob, url, duration }; return a; });
-    });
-    transcribeBlob(
-      blob,
-      (text) => setFollowupTranscriptions((prev) => { const a = [...prev]; a[currentFIdx] = text; return a; }),
-      setFollowupTranscribing
-    );
-  };
-
-  const toggleFPlay = () => {
-    if (!fAudioRef.current) return;
-    if (fPlaying) { fAudioRef.current.pause(); setFPlaying(false); }
-    else { fAudioRef.current.play(); setFPlaying(true); fAudioRef.current.onended = () => setFPlaying(false); }
-  };
-
   // ── Step transitions ──────────────────────────────────────────────────────────
-  const handleQuestionsNext = async () => {
-    setStep("followup");
-    setLoadingFollowup(true);
-    try {
-      const res = await api.post("/autobiography/generate-followups", {
-        name, birthDate, hometown,
-        freeText: getFormattedFreeText(),
-        qas: activeQuestions.map((q, i) => ({
-          question: q.text,
-          category: q.category,
-          answer: transcriptions[i],
-        })),
-      }, { timeout: 0 });
-      const questions: string[] = res.data.followups ?? [];
-      if (questions.length === 0) { goToKeyword(); return; }
-      setFollowupQuestions(questions);
-      setFollowupRecordings(questions.map(emptyRecording));
-      setFollowupTranscriptions(Array(questions.length).fill(""));
-      setCurrentFIdx(0);
-    } catch {
-      goToKeyword();
-    } finally {
-      setLoadingFollowup(false);
-    }
-  };
-
   const goToKeyword = async () => {
     setKeywordsLoading(true);
     setSelectedKeywords([]);
@@ -501,7 +657,6 @@ export default function AutobiographyPage() {
       const res = await api.post("/autobiography/suggest", {
         name, birth: birthDate,
         transcriptions,
-        followup_transcriptions: followupTranscriptions,
       }, { timeout: 0 });
       setKeywordCandidates(res.data.keywords ?? []);
     } catch {
@@ -522,7 +677,6 @@ export default function AutobiographyPage() {
       const res = await api.post("/autobiography/suggest", {
         name, birth: birthDate,
         transcriptions,
-        followup_transcriptions: followupTranscriptions,
         selected_keywords: keywords ?? selectedKeywords,
       }, { timeout: 0 });
       setTitleInput(res.data.title ?? "");
@@ -533,9 +687,12 @@ export default function AutobiographyPage() {
     }
   };
 
+  const [generateError, setGenerateError] = useState("");
+
   const handleGenerate = async () => {
     setStep("generating");
     setProgress(0);
+    setGenerateError("");
     progressIntervalRef.current = setInterval(() => {
       setProgress((p) => (p >= 95 ? 95 : p + 1));
     }, 1800);
@@ -547,13 +704,21 @@ export default function AutobiographyPage() {
       fd.append("hometown", hometown);
       fd.append("questions", JSON.stringify(activeQuestions.map((q) => q.text)));
       fd.append("transcriptions", JSON.stringify(transcriptions));
-      fd.append("followup_transcriptions", JSON.stringify(followupTranscriptions));
+      fd.append("followup_transcriptions", "[]");
       fd.append("free_text", getFormattedFreeText());
       fd.append("keywords", JSON.stringify(selectedKeywords));
       fd.append("title", titleInput);
+      fd.append("writing_style", writingStyle);
+      fd.append("gender", gender);
+      fd.append("military_service", militaryService);
+      fd.append("education", education);
+      fd.append("religion", religion);
       if (localFontFile) fd.append("font_file", localFontFile);
       else if (selectedFontId) fd.append("font_id", selectedFontId);
-      images.forEach((img) => fd.append("images", img));
+      images.forEach(({ file }) => fd.append("images", file));
+      fd.append("image_tags", JSON.stringify(images.map(({ period, memo }) =>
+        period + (memo.trim() ? ` — ${memo.trim()}` : "")
+      )));
 
       const res = await api.post("/autobiography/generate", fd, { timeout: 0 });
       if (res.status === 200) {
@@ -562,12 +727,14 @@ export default function AutobiographyPage() {
         setProgress(100);
         setTimeout(() => router.push("/autobiography/result"), 800);
       }
-    } catch {
-      setTimeout(() => {
-        progressIntervalRef.current && clearInterval(progressIntervalRef.current);
-        setProgress(100);
-        setTimeout(() => router.push("/autobiography/result"), 800);
-      }, 8000);
+    } catch (err: unknown) {
+      progressIntervalRef.current && clearInterval(progressIntervalRef.current);
+      const msg =
+        (err as { response?: { data?: { error?: string } } })?.response?.data?.error
+        || "자서전 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
+      setGenerateError(msg);
+      setProgress(0);
+      setStep("keyword");
     }
   };
 
@@ -600,12 +767,54 @@ export default function AutobiographyPage() {
           onChange={(e) => setBirthDate(e.target.value)}
           className="w-full bg-transparent outline-none text-gray-800 text-base" />
       </FieldCard>
+      <FieldCard label="성별">
+        <div className="flex gap-3">
+          {(["남성", "여성"] as const).map((g) => (
+            <button key={g} onClick={() => setGender(g)}
+              className={`flex-1 py-2 rounded-xl text-sm font-medium border transition ${
+                gender === g ? "bg-brand-500 text-white border-brand-500" : "bg-white text-gray-600 border-gray-200 hover:border-brand-300"
+              }`}>
+              {g}
+            </button>
+          ))}
+        </div>
+      </FieldCard>
+      <FieldCard label="병역 여부">
+        <div className="flex gap-3">
+          {(["군필", "미필", "해당없음"] as const).map((v) => (
+            <button key={v} onClick={() => setMilitaryService(v)}
+              className={`flex-1 py-2 rounded-xl text-sm font-medium border transition ${
+                militaryService === v ? "bg-brand-500 text-white border-brand-500" : "bg-white text-gray-600 border-gray-200 hover:border-brand-300"
+              }`}>
+              {v}
+            </button>
+          ))}
+        </div>
+      </FieldCard>
       <FieldCard label="출신지">
         <input type="text" placeholder="예: 충남 공주시" value={hometown}
           onChange={(e) => setHometown(e.target.value)}
           className="w-full bg-transparent outline-none text-gray-800 placeholder-gray-400 text-base" />
       </FieldCard>
-      <PrimaryButton disabled={!name || !birthDate || !hometown} onClick={() => { setStep("image"); fetchFonts(); }}>다음</PrimaryButton>
+      <FieldCard label="최종 학력">
+        <select value={education} onChange={(e) => setEducation(e.target.value)}
+          className="w-full bg-transparent outline-none text-gray-800 text-base">
+          <option value="">선택 안 함</option>
+          <option value="무학">무학</option>
+          <option value="초등학교 졸업">초등학교 졸업</option>
+          <option value="중학교 졸업">중학교 졸업</option>
+          <option value="고등학교 졸업">고등학교 졸업</option>
+          <option value="대학교 재학 중">대학교 재학 중</option>
+          <option value="대학교 졸업">대학교 졸업</option>
+          <option value="대학원 이상">대학원 이상</option>
+        </select>
+      </FieldCard>
+      <FieldCard label="종교 (선택)">
+        <input type="text" placeholder="예: 불교, 기독교, 천주교, 무교 등"
+          value={religion} onChange={(e) => setReligion(e.target.value)}
+          className="w-full bg-transparent outline-none text-gray-800 placeholder-gray-400 text-base" />
+      </FieldCard>
+      <PrimaryButton disabled={!name || !birthDate || !gender || !militaryService || !hometown} onClick={() => { setStep("image"); fetchFonts(); }}>다음</PrimaryButton>
     </PageShell>
   );
 
@@ -615,7 +824,10 @@ export default function AutobiographyPage() {
       <h1 className="text-2xl font-bold mb-8">기본 정보 입력</h1>
       <FieldCard label="자서전에 넣고픈 이미지 업로드">
         <input type="file" accept="image/*" multiple className="hidden" ref={imageInputRef}
-          onChange={(e) => { if (e.target.files) setImages((p) => [...p, ...Array.from(e.target.files!)]); }} />
+          onChange={(e) => {
+            if (e.target.files)
+              setImages((p) => [...p, ...Array.from(e.target.files!).map((f) => ({ file: f, period: "", memo: "" }))]);
+          }} />
         {images.length === 0 ? (
           <button onClick={() => imageInputRef.current?.click()}
             className="w-full h-44 flex flex-col items-center justify-center gap-2 text-gray-400 hover:text-brand-400 transition">
@@ -623,16 +835,43 @@ export default function AutobiographyPage() {
             <span className="text-sm">클릭하여 이미지 추가</span>
           </button>
         ) : (
-          <div className="space-y-2">
-            {images.map((img, i) => (
-              <div key={i} className="flex items-center justify-between text-sm text-gray-700">
-                <span className="truncate flex-1 mr-2">{img.name}</span>
-                <button onClick={() => setImages((p) => p.filter((_, j) => j !== i))}>
-                  <X size={16} className="text-gray-400 hover:text-red-400" />
-                </button>
+          <div className="space-y-3">
+            {images.map((item, i) => (
+              <div key={i} className="bg-white border border-gray-200 rounded-xl p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-gray-700 truncate flex-1 mr-2">{item.file.name}</span>
+                  <button onClick={() => setImages((p) => p.filter((_, j) => j !== i))}>
+                    <X size={16} className="text-gray-400 hover:text-red-400" />
+                  </button>
+                </div>
+                <p className="text-xs text-gray-400 mb-1.5">어떤 시기의 사진인가요?</p>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {IMAGE_PERIODS.map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => setImages((prev) => prev.map((it, j) =>
+                        j === i ? { ...it, period: it.period === p ? "" : p } : it
+                      ))}
+                      className={`px-2.5 py-1 rounded-full text-xs font-medium border transition ${
+                        item.period === p
+                          ? "bg-brand-500 text-white border-brand-500"
+                          : "bg-white text-gray-500 border-gray-200 hover:border-brand-300"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  placeholder="추가 설명 (선택) 예: 첫 직장 동료들과"
+                  value={item.memo}
+                  onChange={(e) => setImages((p) => p.map((it, j) => j === i ? { ...it, memo: e.target.value } : it))}
+                  className="w-full text-xs text-gray-600 bg-gray-50 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-brand-300 placeholder-gray-300"
+                />
               </div>
             ))}
-            <button onClick={() => imageInputRef.current?.click()} className="text-xs text-brand-400 mt-2">+ 더 추가</button>
+            <button onClick={() => imageInputRef.current?.click()} className="text-xs text-brand-400 mt-1">+ 더 추가</button>
           </div>
         )}
       </FieldCard>
@@ -801,7 +1040,7 @@ export default function AutobiographyPage() {
           }}>
             이전
           </SecondaryButton>
-          <PrimaryButton className="flex-1" onClick={handleQuestionsNext}>
+          <PrimaryButton className="flex-1" onClick={goToKeyword}>
             완료
           </PrimaryButton>
         </div>
@@ -821,7 +1060,6 @@ export default function AutobiographyPage() {
         </div>
 
         <div className="bg-gray-100 rounded-2xl p-8 mb-6">
-          <p className="text-xs font-bold text-brand-400 uppercase tracking-widest mb-3">{q.category}</p>
           <p className="text-xl font-bold text-gray-800 leading-relaxed">{q.text}</p>
         </div>
 
@@ -839,7 +1077,7 @@ export default function AutobiographyPage() {
           onTogglePlay={toggleQPlay}
           onTranscriptChange={(v) => setTranscriptions((prev) => { const a = [...prev]; a[currentQIdx] = v; return a; })}
           onFileUpload={handleQFileUpload}
-          placeholder={QUESTION_HINTS[q.category]}
+          placeholder={q.hint}
         />
 
         <div className="flex gap-3 mt-8">
@@ -857,72 +1095,16 @@ export default function AutobiographyPage() {
     );
   }
 
-  if (step === "followup") {
-    if (loadingFollowup) return (
-      <PageShell>
-        <div className="flex flex-col items-center py-24 gap-4 text-gray-400">
-          <div className="w-8 h-8 border-2 border-brand-300 border-t-brand-500 rounded-full animate-spin" />
-          <span className="text-sm">부족한 답변을 분석하고 있어요...</span>
-        </div>
-      </PageShell>
-    );
-
-    const fq    = followupQuestions[currentFIdx];
-    const frec  = followupRecordings[currentFIdx] ?? emptyRecording();
-    const ftx   = followupTranscriptions[currentFIdx] ?? "";
-    const isLast = currentFIdx === followupQuestions.length - 1;
-
-    return (
-      <PageShell>
-        <StepIndicator step={step} />
-        <div className="flex items-center justify-between mb-8">
-          <span className="text-sm text-gray-400 font-medium">추가 질문 {currentFIdx + 1} / {followupQuestions.length}</span>
-          <div className="flex gap-1">
-            {followupQuestions.map((_, i) => (
-              <button key={i} onClick={() => setCurrentFIdx(i)}
-                className={`w-2 h-2 rounded-full transition ${i === currentFIdx ? "bg-brand-400" : followupRecordings[i]?.status === "done" ? "bg-brand-200" : "bg-gray-200"}`} />
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-gray-100 rounded-2xl p-8 mb-6">
-          <p className="text-xs font-bold text-brand-400 uppercase tracking-widest mb-3">추가 질문</p>
-          <p className="text-xl font-bold text-gray-800 leading-relaxed">{fq}</p>
-        </div>
-
-        <RecordingArea
-          recording={frec}
-          isRecording={isRecording}
-          recSeconds={recSeconds}
-          transcribing={followupTranscribing}
-          transcript={ftx}
-          isPlaying={fPlaying}
-          audioRef={fAudioRef}
-          onStart={handleFStart}
-          onStop={stopRecording}
-          onReset={handleFReset}
-          onTogglePlay={toggleFPlay}
-          onTranscriptChange={(v) => setFollowupTranscriptions((prev) => { const a = [...prev]; a[currentFIdx] = v; return a; })}
-          onFileUpload={handleFFileUpload}
-        />
-
-        <div className="flex gap-3 mt-8">
-          <SecondaryButton className="flex-1" onClick={() => currentFIdx === 0 ? setStep("questions") : setCurrentFIdx((i) => i - 1)}>
-            이전
-          </SecondaryButton>
-          <PrimaryButton className="flex-1" onClick={() => isLast ? goToKeyword() : setCurrentFIdx((i) => i + 1)}>
-            {isLast ? "완료" : "다음 질문"}
-          </PrimaryButton>
-        </div>
-      </PageShell>
-    );
-  }
-
   if (step === "keyword") return (
     <PageShell>
       <StepIndicator step={step} />
       <h1 className="text-2xl font-bold mb-2">핵심 키워드 선택</h1>
       <p className="text-sm text-gray-400 mb-8">자서전의 분위기를 결정할 키워드를 2~3개 골라주세요.</p>
+      {generateError && (
+        <div className="bg-red-50 border border-red-200 rounded-2xl px-5 py-4 mb-6 text-sm text-red-600">
+          ⚠️ {generateError}
+        </div>
+      )}
       {keywordsLoading ? (
         <div className="flex items-center justify-center py-16 text-gray-400 gap-3">
           <div className="w-5 h-5 border-2 border-gray-300 border-t-brand-500 rounded-full animate-spin" />
@@ -988,10 +1170,25 @@ export default function AutobiographyPage() {
               {titleGenerating ? "생성 중..." : "AI로 제목 다시 생성"}
             </button>
           )}
+
+          <div className="bg-gray-100 rounded-2xl p-6 mb-4">
+            <p className="text-sm font-bold text-gray-600 mb-3">자서전 문체 선택</p>
+            <p className="text-xs text-gray-400 mb-3">생성될 자서전의 말투를 선택해주세요.</p>
+            <div className="flex gap-3">
+              {(["서술체", "경어체"] as const).map((style) => (
+                <button key={style} onClick={() => setWritingStyle(style)}
+                  className={`flex-1 py-3 rounded-xl text-sm font-medium border transition ${
+                    writingStyle === style ? "bg-brand-500 text-white border-brand-500" : "bg-white text-gray-600 border-gray-200 hover:border-brand-300"
+                  }`}>
+                  {style === "서술체" ? "서술체 (~했다)" : "경어체 (~했습니다)"}
+                </button>
+              ))}
+            </div>
+          </div>
         </>
       )}
       <div className="flex gap-3">
-        <SecondaryButton className="flex-1" onClick={() => followupQuestions.length > 0 ? setStep("followup") : setStep("questions")}>
+        <SecondaryButton className="flex-1" onClick={() => setStep("questions")}>
           이전
         </SecondaryButton>
         <PrimaryButton className="flex-1" onClick={handleGenerate} disabled={selectedKeywords.length < 2 && !titleInput.trim()}>
@@ -1326,7 +1523,7 @@ const MACRO_STEPS = ["기본 정보", "인터뷰", "제목", "생성"];
 
 function stepIndexOf(step: Step): number {
   if (step === "info" || step === "image") return 0;
-  if (step === "questions" || step === "followup") return 1;
+  if (step === "questions") return 1;
   if (step === "keyword") return 2;
   return 3;
 }

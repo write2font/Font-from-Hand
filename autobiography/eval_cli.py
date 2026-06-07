@@ -25,13 +25,17 @@ def main():
 
         chapters       = data.get("chapters", [])
         interview_text = data.get("interview_text", "")
+        cover_title    = data.get("cover_title", "")
+        toc_titles     = data.get("toc_titles", None)
 
         if not chapters:
             exit_error("chapters가 비어있습니다.")
 
         from src.evaluator import AutobiographyEvaluator
         evaluator = AutobiographyEvaluator()
-        result = evaluator.evaluate(chapters, interview_text)
+        result = evaluator.evaluate(chapters, interview_text,
+                                    cover_title=cover_title,
+                                    toc_titles=toc_titles)
 
         print(json.dumps(result, ensure_ascii=False))
 
