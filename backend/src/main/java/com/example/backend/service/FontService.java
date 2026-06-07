@@ -64,7 +64,7 @@ public class FontService {
     @Value("${font.engine.ai.python-command:python}")
     private String aiPythonCommand;
 
-    @Value("${font.engine.ai.model:LF}")
+    @Value("${font.engine.ai.model:DM}")
     private String aiModel;
 
     @Value("${font.engine.ai.weight-path:}")

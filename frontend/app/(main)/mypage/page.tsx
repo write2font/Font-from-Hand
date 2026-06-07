@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BookOpen, Download, FileText, Pencil, Trash2, User } from "lucide-react";
-import api, { authService } from "@/app/lib/axios";
+import api, { authService, getApiBaseUrl } from "@/app/lib/axios";
 import PageHeader from "@/components/ui/PageHeader";
 import Button from "@/components/ui/Button";
 
@@ -287,7 +287,7 @@ export default function MyPage() {
                   <div className="flex items-center gap-3">
                     <Button
                       size="sm"
-                      onClick={() => window.open(`http://localhost:8080/api/v1/autobiography/download/${auto.id}`, "_blank")}
+                      onClick={() => window.open(`${getApiBaseUrl()}/autobiography/download/${auto.id}`, "_blank")}
                       className="flex items-center gap-2"
                     >
                       <Download size={14} />

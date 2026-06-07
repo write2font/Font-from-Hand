@@ -5,6 +5,7 @@ WORKDIR /workspace/backend
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         fontforge-nox \
+        ffmpeg \
         potrace \
         python3 \
         python3-pip \
@@ -36,6 +37,10 @@ RUN pip3 install --no-cache-dir \
         adamp \
         lpips
 
+COPY autobiography/requirements.txt /workspace/autobiography/requirements.txt
+RUN pip3 install --no-cache-dir -r /workspace/autobiography/requirements.txt
+COPY autobiography /workspace/autobiography
+
 COPY backend/gradlew backend/settings.gradle backend/build.gradle ./
 COPY backend/gradle ./gradle
 COPY backend/src ./src
@@ -48,8 +53,8 @@ ENV FONT_ENGINE_LEGACY_PYTHON_COMMAND=python3
 ENV FONT_ENGINE_AI_USE_DOCKER=false
 ENV FONT_ENGINE_AI_ENGINE_DIR=/workspace/fewshot-font-generation
 ENV FONT_ENGINE_AI_PYTHON_COMMAND=python3
-ENV FONT_ENGINE_AI_MODEL=MX
-ENV FONT_ENGINE_AI_WEIGHT_PATH=write2font/pth/last.pth
+ENV FONT_ENGINE_AI_MODEL=DM
+ENV FONT_ENGINE_AI_WEIGHT_PATH=write2font/pth/dm.pth
 
 EXPOSE 8080
 

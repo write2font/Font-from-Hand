@@ -8,3 +8,26 @@ write2font/pth
 *.pth
 *.pt
 *.ckpt
+
+# Font-from-Hand uses DM-Font only. Keep these files in git for traceability,
+# but keep them out of the DM runtime image.
+.github
+docs
+data_example
+data/chn
+LF
+MX
+FUNIT
+cfgs/LF
+cfgs/MX
+cfgs/FUNIT
+cfgs/train
+cfgs/evaluator
+evaluator
+*.ipynb
+*_LF.ipynb
+*_MX.ipynb
+*_FUNIT.ipynb
+train_*.py
+train_and_inference.ipynb
+ttf_to_png.ipynb

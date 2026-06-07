@@ -120,7 +120,12 @@ class Memory(nn.Module):
         self.dynamic_memory.write(style_ids, comp_ids, sc_feats)
 
     def read(self, style_ids, comp_ids, reduction="mean"):
-        feats = self.dynamic_memory.read(style_ids, comp_ids, reduction).cuda()
+        feats = self.dynamic_memory.read(style_ids, comp_ids, reduction)
+        if torch.is_tensor(comp_ids):
+            feats = feats.to(comp_ids.device)
+        elif self.persistent:
+            feats = feats.to(self.persistent_memory.bias.device)
+
         if self.persistent:
             feats = self.persistent_memory(feats, comp_ids)
 

@@ -1,7 +1,19 @@
 import axios from "axios";
 
+export const getApiBaseUrl = () => {
+  if (process.env.NEXT_PUBLIC_API_BASE_URL) {
+    return process.env.NEXT_PUBLIC_API_BASE_URL;
+  }
+
+  if (typeof window !== "undefined") {
+    return `${window.location.protocol}//${window.location.hostname}:8080/api/v1`;
+  }
+
+  return "http://localhost:8080/api/v1";
+};
+
 const api = axios.create({
-  baseURL: "http://localhost:8080/api/v1",
+  baseURL: getApiBaseUrl(),
   timeout: 10000,
   withCredentials: true,
 });
