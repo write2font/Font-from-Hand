@@ -134,12 +134,18 @@ public class AutobiographyController {
             @RequestParam("questions")               String questionsJson,
             @RequestParam("transcriptions")          String transcriptionsJson,
             @RequestParam("followup_transcriptions") String followupJson,
-            @RequestParam(value = "free_text", required = false, defaultValue = "") String freeText,
+            @RequestParam(value = "free_text",      required = false, defaultValue = "") String freeText,
             @RequestParam("keywords")                String keywordsJson,
-            @RequestParam(value = "title", required = false, defaultValue = "") String title,
-            @RequestParam(value = "font_id", required = false, defaultValue = "") String fontId,
-            @RequestParam(value = "font_file", required = false) MultipartFile fontFile,
-            @RequestParam(value = "images", required = false) List<MultipartFile> images
+            @RequestParam(value = "title",          required = false, defaultValue = "") String title,
+            @RequestParam(value = "font_id",        required = false, defaultValue = "") String fontId,
+            @RequestParam(value = "font_file",      required = false) MultipartFile fontFile,
+            @RequestParam(value = "images",         required = false) List<MultipartFile> images,
+            @RequestParam(value = "image_tags",     required = false, defaultValue = "[]") String imageTagsJson,
+            @RequestParam(value = "writing_style",   required = false, defaultValue = "서술체") String writingStyle,
+            @RequestParam(value = "gender",          required = false, defaultValue = "") String gender,
+            @RequestParam(value = "military_service",required = false, defaultValue = "") String militaryService,
+            @RequestParam(value = "education",       required = false, defaultValue = "") String education,
+            @RequestParam(value = "religion",        required = false, defaultValue = "") String religion
     ) {
         Path tempJson = null;
         Path tempFontPath = null;
@@ -147,14 +153,18 @@ public class AutobiographyController {
         try {
             String userId = UUID.randomUUID().toString().substring(0, 8);
 
-            // 업로드 이미지는 전부 챕터 배치용 — 표지는 AI가 생성
-            List<String> extraImagePaths = new java.util.ArrayList<>();
+            // 업로드 이미지: 경로 + 상황 태그를 묶어서 Python에 전달
+            List<String> imageTags = objectMapper.readValue(imageTagsJson, List.class);
+            List<Map<String, String>> extraImages = new java.util.ArrayList<>();
             if (images != null && !images.isEmpty()) {
                 for (int i = 0; i < images.size(); i++) {
                     Path extraTemp = Files.createTempFile("auto_img_" + i + "_", ".jpg");
                     images.get(i).transferTo(extraTemp.toFile());
                     tempImagePaths.add(extraTemp);
-                    extraImagePaths.add(extraTemp.toString());
+                    Map<String, String> imgInfo = new LinkedHashMap<>();
+                    imgInfo.put("path", extraTemp.toString());
+                    imgInfo.put("tag", i < imageTags.size() ? imageTags.get(i) : "");
+                    extraImages.add(imgInfo);
                 }
             }
 
@@ -163,13 +173,18 @@ public class AutobiographyController {
             payload.put("birth", birth);
             payload.put("hometown", hometown);
             payload.put("user_id", userId);
+            payload.put("writing_style", writingStyle);
+            payload.put("gender", gender);
+            payload.put("military_service", militaryService);
+            payload.put("education", education);
+            payload.put("religion", religion);
             payload.put("questions", objectMapper.readValue(questionsJson, List.class));
             payload.put("transcriptions", objectMapper.readValue(transcriptionsJson, List.class));
             payload.put("followup_transcriptions", objectMapper.readValue(followupJson, List.class));
             payload.put("free_text", freeText);
             payload.put("keywords", objectMapper.readValue(keywordsJson, List.class));
             payload.put("title", title);
-            if (!extraImagePaths.isEmpty()) payload.put("extra_image_paths", extraImagePaths);
+            if (!extraImages.isEmpty()) payload.put("extra_images", extraImages);
             // 업로드 폰트 파일 우선, 없으면 font_id로 조회
             if (fontFile != null && !fontFile.isEmpty()) {
                 String origName = fontFile.getOriginalFilename();

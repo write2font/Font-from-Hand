@@ -27,17 +27,53 @@ class NLPProcessor:
         )
         os.makedirs(config.SUMMARY_DIR, exist_ok=True)
 
-    def _get_chapter_structure_by_age(self, age: int) -> list:
+    def _get_chapter_structure_by_age(self, age: int, military_service: str = "", education: str = "") -> list:
+        military = military_service == "군필"
         if age < 30:
-            return config.CHAPTER_STRUCTURE_20S
+            base = config.CHAPTER_STRUCTURE_20S_MILITARY if military else config.CHAPTER_STRUCTURE_20S
         elif age < 50:
-            return config.CHAPTER_STRUCTURE_3040S
+            base = config.CHAPTER_STRUCTURE_3040S_MILITARY if military else config.CHAPTER_STRUCTURE_3040S
         elif age < 70:
-            return config.CHAPTER_STRUCTURE_5060S
+            base = config.CHAPTER_STRUCTURE_5060S_MILITARY if military else config.CHAPTER_STRUCTURE_5060S
         else:
-            return config.CHAPTER_STRUCTURE_70PLUS
+            base = config.CHAPTER_STRUCTURE_70PLUS_MILITARY if military else config.CHAPTER_STRUCTURE_70PLUS
 
-    def _generate(self, system_prompt: str, user_prompt: str, max_tokens: int = None) -> str:
+        has_college = education in ("대학교 졸업", "대학원 이상", "대학교 재학 중")
+        if has_college:
+            base = self._insert_college_chapter(base)
+        return base
+
+    def _insert_college_chapter(self, structure: list) -> list:
+        """Q9~Q10 위치에 대학 시절 챕터 2개를 삽입하고 이후 q_numbers를 +2 시프트.
+        Q1-Q8이 공통 질문이므로 대학 질문은 Q9(전공·캠퍼스)와 Q10(동아리·교수님)."""
+        COLLEGE_Q = 9
+        college_chapters = [
+            {
+                "q_numbers": [COLLEGE_Q],
+                "guide": "대학 시절. 전공 선택의 계기, 처음 캠퍼스를 걷던 날의 설렘, 그때 만난 인연을 서술하세요.",
+            },
+            {
+                "q_numbers": [COLLEGE_Q + 1],
+                "guide": "대학 시절의 열정. 가장 빠져들었던 동아리·활동, 영향받은 교수님이나 수업 이야기를 서술하세요.",
+            },
+        ]
+        result = []
+        college_inserted = False
+        for chapter in structure:
+            q_nums = chapter.get("q_numbers", [])
+            if not college_inserted and any(qn >= COLLEGE_Q for qn in q_nums):
+                result.extend(college_chapters)
+                college_inserted = True
+            shifted = {
+                **chapter,
+                "q_numbers": [qn + 2 if qn >= COLLEGE_Q else qn for qn in q_nums],
+            }
+            result.append(shifted)
+        if not college_inserted:
+            result.extend(college_chapters)
+        return result
+
+    def _generate(self, system_prompt: str, user_prompt: str, max_tokens: int = None, timeout: int = 300) -> str:
         for attempt in range(3):
             try:
                 response = client.chat.completions.create(
@@ -47,7 +83,7 @@ class NLPProcessor:
                         {"role": "user",   "content": user_prompt},
                     ],
                     max_tokens=max_tokens or config.LLM_MAX_TOKENS,
-                    timeout=90,
+                    timeout=timeout,
                 )
                 return response.choices[0].message.content.strip()
             except Exception as e:
@@ -224,52 +260,66 @@ class NLPProcessor:
     def generate_chapter_titles(self, transcript_text: str, birth_date_str: str,
                                  selected_keywords: list = None,
                                  n: int = None, chapter_structure: list = None,
-                                 seg_map: dict = None) -> list:
+                                 seg_map: dict = None,
+                                 central_metaphor: str = "") -> list:
         chapter_structure = chapter_structure or self.chapter_structure
         n = n or len(chapter_structure)
         seg_map = seg_map or {}
 
         titles = []
         for i, chapter in enumerate(chapter_structure):
-            title = self._generate_single_chapter_title(chapter, seg_map, transcript_text)
+            title = self._generate_single_chapter_title(chapter, seg_map, transcript_text, central_metaphor)
             titles.append(title)
             print(f"[NLP] 챕터 {i+1} 제목: {title}")
 
         return titles[:n]
 
-    def _generate_single_chapter_title(self, chapter: dict, seg_map: dict, transcript_text: str) -> str:
-        # 챕터 관련 Q 답변으로 요약문 구성
+    def _generate_single_chapter_title(self, chapter: dict, seg_map: dict,
+                                        transcript_text: str, central_metaphor: str = "") -> str:
         chapter_qs = chapter.get("q_numbers", [])
         parts = [seg_map[qn][:250] for qn in chapter_qs if seg_map.get(qn)]
         chapter_summary = "\n".join(parts) if parts else transcript_text[:400]
         guide = chapter.get("guide", "")
 
+        metaphor_hint = (
+            f"- 이 자서전의 중심 은유는 '{central_metaphor}'다. "
+            f"제목에 이 은유의 이미지나 언어가 자연스럽게 녹아들면 좋다. 억지로 끼워넣지는 마라.\n"
+        ) if central_metaphor else ""
+
         prompt = (
-            f"아래 인터뷰 내용을 읽고 챕터 제목을 명사형으로 3개 생성하라.\n"
+            f"아래 인터뷰 내용을 읽고, 이 챕터를 가장 잘 표현하는 제목을 3개 만들어라.\n"
             f"챕터 주제: {guide}\n\n"
-            f"규칙:\n"
-            f"- 2~6자, 짧고 함축적. 감정·분위기를 압축한 단어나 짧은 구.\n"
-            f"- 좋은 예: 첫 출발 / 긴 기다림 / 귀향 / 빈 의자 / 흉터 / 낯선 봄 / 오래된 약속\n"
-            f"- 인터뷰에 나온 특정 사물·음식 이름을 그대로 쓰지 마라\n"
-            f"- 연도·나이·시대명·교훈·결론 금지\n\n"
+            f"【제목 스타일 규칙】\n"
+            f"- 명사형 단어 나열 절대 금지. ('귀향', '첫 출발', '긴 기다림' 같은 스타일 금지)\n"
+            f"- 그 챕터의 핵심 장면이나 감정을 담은 서사적·시적 구나 문장으로 만들어라.\n"
+            f"- 10~20자 내외. 동사나 서술어가 포함되면 더 좋다.\n"
+            f"- 좋은 예:\n"
+            f"  '축구공을 내려놓았던 어느 오후'\n"
+            f"  '불협화음 속에서 피어난 나의 노래'\n"
+            f"  '길 잃은 돛배, 사랑이라는 등대를 만나다'\n"
+            f"  '그 여름, 처음으로 나를 선택했다'\n"
+            f"  '어머니의 손이 닿았던 자리'\n"
+            f"{metaphor_hint}"
+            f"- 연도·나이·시대명·교훈·결론 금지\n"
+            f"- 인터뷰 내용에서 구체적 소재(사물·장소·감정)를 뽑아 은유로 발전시켜라\n\n"
             f"[인터뷰 내용]\n{chapter_summary}\n\n"
-            f'JSON만 출력하라: {{"명사형": ["제목1", "제목2", "제목3"]}}'
+            f'JSON만 출력하라: {{"titles": ["제목1", "제목2", "제목3"]}}'
         )
 
         try:
             response = client.chat.completions.create(
                 model=config.LLM_MODEL,
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=150,
+                max_tokens=200,
             )
             parsed = self._parse_json(response.choices[0].message.content.strip())
-            candidates = parsed.get("명사형", [])
+            candidates = parsed.get("titles", [])
             if candidates:
                 return candidates[0]
         except Exception as e:
             print(f"[NLP] ⚠️  챕터 제목 생성 실패 ({chapter.get('title', '')}): {e}")
 
-        return chapter.get("guide", "이야기")[:10]
+        return chapter.get("guide", "이야기")[:15]
 
     # ──────────────────────────────────────────
     # 4. 자서전 본문 생성
@@ -277,7 +327,8 @@ class NLPProcessor:
 
     def generate_autobiography(self, transcript_text, birth_date_str, user_name="저자",
                                 region_info: dict = None, selected_keywords: list = None,
-                                segments: list = None):
+                                segments: list = None, writing_style: str = "서술체",
+                                military_service: str = "", education: str = ""):
         persona_key   = self.determine_persona(birth_date_str)
         persona_label = config.PERSONA_PROMPTS[persona_key]
         age           = self.calculate_age(birth_date_str)
@@ -285,6 +336,9 @@ class NLPProcessor:
 
         print("[NLP] 키워드 추출 중...")
         keywords = self.extract_keywords(transcript_text, birth_date_str)
+
+        print("[NLP] 중심 은유 생성 중...")
+        central_metaphor = self._generate_central_metaphor(transcript_text, keywords, selected_keywords)
 
         # segments를 Q번호로 인덱싱 (Q1~Q15) - 챕터 구조 결정 전에 먼저 빌드
         seg_map = {}
@@ -295,16 +349,14 @@ class NLPProcessor:
                     seg_map[int(m.group(1))] = seg.get("answer", "").strip()
 
         # 나이 기반 챕터 구조 선택 → 답변 밀도로 동적 조정
-        self.chapter_structure = self._get_chapter_structure_by_age(age)
+        self.chapter_structure = self._get_chapter_structure_by_age(age, military_service, education)
         chapter_structure = self._build_chapter_structure(seg_map)
-        # 프롤로그 챕터 제외 (짧은 도입부 페이지 불필요)
-        chapter_structure = [ch for ch in chapter_structure if not ch.get("is_prologue")]
 
         print("[NLP] 챕터 제목 생성 중...")
         chapter_titles = self.generate_chapter_titles(
             transcript_text, birth_date_str, selected_keywords=selected_keywords,
             n=len(chapter_structure), chapter_structure=chapter_structure,
-            seg_map=seg_map,
+            seg_map=seg_map, central_metaphor=central_metaphor,
         )
 
         print(f"[NLP] 페르소나: {persona_key} (만 {age}세) → {len(chapter_structure)}개 챕터 생성 중...")
@@ -351,6 +403,8 @@ class NLPProcessor:
                 written_summaries=written_summaries,
                 region_info=region_info if (use_region or use_era) else None,
                 assigned_episode=chapter_plan.get(i),
+                central_metaphor=central_metaphor,
+                writing_style=writing_style,
             )
 
             # 마크다운/소제목 제거
@@ -365,9 +419,10 @@ class NLPProcessor:
             content = re.sub(r"[^\uAC00-\uD7A3\u1100-\u11FF\u3130-\u318F\s\d\.,!?~\-\"\'()]", "", content)
             # 특수문자 치환
             content = content.replace("—", "-").replace("–", "-")
-            # 말투 정규화
-            content = re.sub(r"했었[어다]", "했다", content)
-            content = re.sub(r"하곤 했[었]?[어다]?", "했다", content)
+            # 말투 정규화 (평서문만)
+            if writing_style != "경어체":
+                content = re.sub(r"했었[어다]", "했다", content)
+                content = re.sub(r"하곤 했[었]?[어다]?", "했다", content)
             # '○○ 마을' → '○○' (지역명 뒤 마을 제거)
             content = re.sub(r"(\S{2,5})\s*마을", r"\1", content)
             # 이름(종희 등) → 나 (1인칭 자서전)
@@ -402,11 +457,22 @@ class NLPProcessor:
             for w in nouns:
                 noun_freq[w] = noun_freq.get(w, 0) + 1
             top_nouns = [w for w, _ in sorted(noun_freq.items(), key=lambda x: -x[1])[:20]]
+            # 첫 문장 추출 (오프닝 스타일 추적용)
+            first_sent = content.split("\n")[0][:120].strip()
             written_summaries.append(
-                f"[{title}] 주요 소재: {', '.join(top_nouns)}\n요약: {content[:300]}..."
+                f"[챕터{i+1}: {title}]\n"
+                f"  첫 문장: {first_sent}\n"
+                f"  주요 소재: {', '.join(top_nouns[:15])}\n"
+                f"  내용 앞부분: {content[:450]}\n"
+                f"  내용 끝부분: ...{content[-200:]}"
             )
             # 전체 챕터 요약 유지 (흐름/중복 방지용)
-            chapters.append({"title": title, "content": content})
+            chapters.append({
+                "title": title,
+                "content": content,
+                "is_prologue": chapter.get("is_prologue", False),
+                "is_epilogue": chapter.get("is_epilogue", False),
+            })
             print(f"  ✓ ({i+1}/{len(chapter_structure)}) {title}")
 
         # 표지 제목 생성 (선택된 키워드 활용)
@@ -515,7 +581,9 @@ class NLPProcessor:
     def _generate_chapter(self, chapter, title, transcript_text, keywords,
                            persona_label, user_name, age, birth_year,
                            written_summaries=None, region_info=None,
-                           assigned_episode: str = None):
+                           assigned_episode: str = None,
+                           central_metaphor: str = "",
+                           writing_style: str = "평서문"):
 
         if chapter.get("is_prologue"):
             prologue_system = (
@@ -529,14 +597,14 @@ class NLPProcessor:
                 "- 학교명·직업·특정 장소·인물·대화 언급 금지\n"
                 "- 마크다운(#,*,**) 금지. 서술체(-다, -었다)로만.\n"
                 "- 1인칭('나')으로만.\n\n"
-                "300자 내외, 간결하게 마무리."
+                "2000자 내외로 써라. 독자가 이 사람의 삶으로 천천히 걸어들어오게 하는 문학적 도입부."
             )
             prologue_user = (
                 f"저자: {user_name} ({birth_year}년생, 만 {age}세)\n\n"
                 "이 인물의 자서전 첫 페이지를 써라. "
                 "이름, 출생년도, 시대 배경만 담아라. 구체적인 경험은 절대 쓰지 마라."
             )
-            return self._generate(prologue_system, prologue_user, max_tokens=500)
+            return self._generate(prologue_system, prologue_user, max_tokens=2500)
 
         birth_int  = int(birth_year) if birth_year.isdigit() else 1952
         war_note   = (
@@ -552,7 +620,10 @@ class NLPProcessor:
                 "\n\n【이전 챕터 요약 — 아래 소재·사건·표현은 이 챕터에서 절대 재사용 금지】\n"
                 + "\n".join(written_summaries)
                 + "\n\n→ 이 챕터는 위 챕터들과 완전히 다른 소재·감정·장면으로만 채워야 한다. "
-                "같은 사건을 다른 각도로 쓰는 것도 금지. 앞 챕터에서 한 번이라도 언급된 것은 쓰지 마라."
+                "같은 사건을 다른 각도로 쓰는 것도 금지. 앞 챕터에서 한 번이라도 언급된 것은 쓰지 마라.\n"
+                "→ 각 챕터의 '첫 문장' 항목을 반드시 확인하라. "
+                "위에 나온 첫 문장들과 시작 방식(감각 묘사/독자에게 말 걸기/역설/대화·소리/현재 시점 회상)이 "
+                "겹치면 안 된다. 아직 쓰이지 않은 방식을 골라 이 챕터를 시작하라."
             )
 
         region_context = ""
@@ -572,21 +643,39 @@ class NLPProcessor:
                 f"다른 챕터들은 각자의 에피소드가 있으므로, 이 챕터에서 그것들을 언급하지 마라."
             )
 
+        style_rule = (
+            "경어체(-습니다, -이었습니다, -했습니다)로만 써라. 서술체(-다, -었다) 금지."
+            if writing_style == "경어체"
+            else "서술체(-다, -었다, -이었다)로만 써라. 존댓말(-습니다)/번역투 금지."
+        )
+        metaphor_rule = (
+            f"\n【중심 은유】\n"
+            f"이 자서전 전체를 관통하는 은유: '{central_metaphor}'\n"
+            f"이 은유를 챕터 본문에 자연스럽게 녹여라. 억지로 끼워넣지 말고, 분위기·묘사·비유에 슬며시 스며들게.\n"
+        ) if central_metaphor else ""
+
         system_prompt = (
             f"{persona_label}\n"
             "당신은 한국 문학상을 받은 산문 작가입니다. "
             "인터뷰 내용을 바탕으로 독자의 마음을 움직이는 자서전 한 챕터를 씁니다.\n\n"
             "【절대 규칙】\n"
-            "1. 인터뷰 답변에 명시된 사실만 써라. 언급되지 않은 직업·장소·사건·인물·감정을 절대 창작하지 마라.\n"
-            "2. 인터뷰에 없는 내용을 추론하거나 상상으로 채우지 마라. 모르면 쓰지 마라.\n"
+            "1. 인터뷰 답변의 사실(인물·사건·장소)을 근거로 써라. "
+            "단, 감각 묘사·심리 묘사·은유·분위기는 문학적으로 풍부하게 표현해도 된다. "
+            "인터뷰에 전혀 없는 사건·인물·직업을 창작하는 것만 금지다.\n"
+            "2. 행간을 채울 때 인터뷰의 감정·분위기에서 유추한 심리 묘사는 허용. "
+            "있지도 않은 외부 사건(병원 방문, 타인의 죽음 등)을 꾸며내는 것은 금지.\n"
             "3. 순수 한국어만. 영어·한자·외국어 절대 금지.\n"
-            "4. 서술체(-다, -었다, -이었다)로만. 존댓말(-습니다)/번역투 금지.\n"
+            f"4. {style_rule}\n"
             "5. 챕터 제목·소제목을 본문에 절대 쓰지 마라. 마크다운(#,*,**) 금지.\n"
             "6. 이전 챕터에 나온 소재·사건·문장은 단 하나도 반복 금지. 비슷한 표현도 금지.\n"
             f"7. {war_note}\n"
             "8. 반드시 1인칭('나')으로만 서술. 저자 이름이나 '그', '그녀' 절대 금지.\n"
-            "9. 2500자 이상 완성된 문장으로 마무리.\n"
-            "10. 문단 구조: 하나의 문단은 반드시 3문장 이상으로 구성하라. 문장 하나만 달랑 쓰고 줄바꿈하는 것 절대 금지. 문단 안에서는 줄바꿈 없이 이어 써라.\n"
+            "9. 6000자 이상 완성된 문장으로 마무리.\n"
+            "10. 문단 구조: 하나의 문단은 반드시 3문장 이상으로 구성하라. 문장 하나만 달랑 쓰고 줄바꿈하는 것 절대 금지.\n"
+            "11. 인터뷰에 직접 언급되지 않은 구체적 수치(연도·금액·거리·나이·소요 시간·층수·인원 등)를 "
+            "임의로 만들어 쓰지 마라. 수치가 필요하면 '얼마쯤', '한참', '그 무렵', '몇 해', '꽤 오랜' 등 "
+            "막연한 표현으로 대체하라.\n"
+            f"{metaphor_rule}"
             f"{prev_context}"
             f"{episode_instruction}\n\n"
             "【작가의 문장으로 쓰는 법】\n"
@@ -596,7 +685,7 @@ class NLPProcessor:
             "  (C) 역설·아이러니: '가장 잘 알아야 할 사람이 나인데, 그 밤 나는 나를 몰랐다.'\n"
             "  (D) 대화·소리로 시작: '합격이요. 그 두 글자가 전화기 너머로 들어왔다.'\n"
             "  (E) 현재 시점에서 회상: '지금도 그 골목을 지나면 자연스럽게 발이 느려진다.'\n"
-            "  금지: 매 챕터 같은 방식(단문 + ~했다.) 반복 금지. 이전 챕터 오프닝 스타일과 달라야 한다.\n"
+            "  금지: 매 챕터 같은 방식 반복 금지. 이전 챕터 오프닝 스타일과 달라야 한다.\n"
             "- 사건을 나열하지 말고, 그 순간에 머물러라. 독자가 숨을 참게 만드는 장면 하나가 열 문장보다 낫다.\n"
             "- 감정은 직접 말하지 말고 행동과 감각으로 보여라. ('슬펐다' 대신 '그날 밥을 먹지 못했다')\n"
             "- 감정의 두 층위를 담아라: 그 당시 느꼈던 감정과, 지금 돌아봤을 때 느끼는 감정은 다르다. 두 시점을 자연스럽게 교차하라.\n"
@@ -613,12 +702,46 @@ class NLPProcessor:
             f"【아래 인터뷰 답변만 사용하라. 여기에 없는 내용은 절대 쓰지 마라】\n"
             f"\"\"\"\n{transcript_trimmed}\n\"\"\""
             f"{region_context}\n\n"
-            f"위 답변을 바탕으로 '{title}' 챕터를 2500자 내외로 작성하라. "
+            f"위 답변을 바탕으로 '{title}' 챕터를 6000자 이상으로 작성하라. "
             f"첫 문장은 구체적인 장면·순간으로 시작하고, 독자가 이 사람의 삶 속으로 들어올 수 있게 써라. "
             f"감정 표현은 답변에서 드러난 것만 살려라."
         )
 
         return self._generate(system_prompt, user_prompt, max_tokens=config.LLM_MAX_TOKENS)
+
+    def _generate_central_metaphor(self, transcript_text: str, keywords: dict,
+                                    selected_keywords: list = None) -> str:
+        kw_list = selected_keywords[:5] if selected_keywords else (
+            keywords.get("events", []) + keywords.get("emotions", []) + keywords.get("places", [])
+        )[:5]
+        kw_str = ", ".join(kw_list) if kw_list else "삶, 가족, 시간"
+
+        prompt = (
+            f"아래 인터뷰와 핵심 키워드를 읽고, 이 사람의 삶 전체를 관통하는 중심 은유 하나를 만들어라.\n\n"
+            f"핵심 키워드: {kw_str}\n"
+            f"인터뷰 (앞부분): {transcript_text[:800]}\n\n"
+            f"규칙:\n"
+            f"1. '은유 소재: 삶의 어느 측면을 무엇으로 표현한다'는 방식으로 한 문장.\n"
+            f"   예: '악보 — 삶을 악보로, 어려움을 불협화음으로, 완성된 삶을 하모니로'\n"
+            f"   예: '씨앗과 뿌리 — 고향의 흙에 심은 씨앗이 가족과 직업으로 뿌리내리는 여정'\n"
+            f"   예: '계절의 순환 — 청춘은 봄, 시련은 겨울, 노년은 깊어진 가을'\n"
+            f"   예: '강물 — 쉬지 않고 흐르되 돌을 만나면 방향을 바꾸는 강물 같은 삶'\n"
+            f"2. 인터뷰의 실제 감정·경험과 연결되어야 한다.\n"
+            f"3. 한 문장만 출력. 설명 없이."
+        )
+        try:
+            response = client.chat.completions.create(
+                model=config.LLM_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=120,
+            )
+            metaphor = response.choices[0].message.content.strip().strip('"\'')
+            metaphor = re.sub(r"[A-Za-z]", "", metaphor).strip()
+            print(f"[NLP] 중심 은유: {metaphor}")
+            return metaphor
+        except Exception as e:
+            print(f"[NLP] ⚠️  중심 은유 생성 실패 ({e})")
+            return ""
 
     # ──────────────────────────────────────────
     # 5. 결과 저장
