@@ -16,7 +16,7 @@ def main() -> None:
     parser.add_argument("--input", required=True, help="Reference sheet image or directory")
     parser.add_argument("--out-ttf", required=True)
     parser.add_argument("--family-name", required=True)
-    parser.add_argument("--model", choices=["LF", "MX", "DM"], default="DM")
+    parser.add_argument("--model", choices=["DM"], default="DM")
     parser.add_argument("--weight", required=True)
     parser.add_argument("--python", default="python")
     parser.add_argument("--result-dir", default="write2font/result")
@@ -42,22 +42,15 @@ def main() -> None:
             str(Path(args.input).resolve()),
             "--out-dir",
             str(png_dir),
+            "--padding",
+            "0",
         ],
         root,
     )
 
-    if args.model == "LF":
-        inference_script = "inference_cpu.py"
-        model_config = "cfgs/LF/p2/eval.yaml"
-        model_args = ["--model", "LF"]
-    elif args.model == "DM":
-        inference_script = "inference_cpu.py"
-        model_config = "cfgs/DM/eval.yaml"
-        model_args = ["--model", "DM"]
-    else:
-        inference_script = "inference_cpu.py"
-        model_config = "cfgs/MX/eval.yaml"
-        model_args = ["--model", "MX"]
+    inference_script = "inference_cpu.py"
+    model_config = "cfgs/DM/eval.yaml"
+    model_args = ["--model", "DM"]
 
     run(
         [

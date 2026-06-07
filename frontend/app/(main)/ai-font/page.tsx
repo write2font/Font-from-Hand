@@ -11,13 +11,14 @@ import {
   X,
   Zap,
 } from "lucide-react";
+import axios from "axios";
 import api from "@/app/lib/axios";
 import { useRouter } from "next/navigation";
 import StepItem from "@/components/ui/StepItem";
 import Button from "@/components/ui/Button";
 
 const SAMPLE_CHARS =
-  "가 각 값 갸 걔 거 곬 궤 기 까 깎 꺄 꼬 꽈 꾀 꾸 꿔 꿜 끄 난 낯 넓 늬 다 닫 닭 닿 따 떫 많 맘 몫 밥 밭 뻐 뼈 뽀 뾱 쀼 삿 샀 샤 쒀 쓩 앉 앙 엌 왱 읊 잃 잎 잦 젊 짜 쪄 쭁 췸 큉 텍 툽 팃 퓽 핥 휸";
+  "값 같 곬 곶 깎 넋 녘 늪 닫 닭 닻 됩 뗌 략 몃 밟 볘 뺐 뽈 솩 쐐 앉 않 얘 얾 엌 옳 우 읊 좋 죡 쮜 춰 츄 퀭 틔 핀 핥";
 
 export default function AiFontPage() {
   const router = useRouter();
@@ -82,7 +83,12 @@ export default function AiFontPage() {
       setTimeout(() => router.push("/ai-font/result"), 500);
     } catch (error) {
       console.error("AI font upload failed:", error);
-      alert("폰트 생성 중 서버 오류가 발생했습니다.");
+      const message = axios.isAxiosError(error)
+        ? typeof error.response?.data === "string"
+          ? error.response.data
+          : error.message
+        : "폰트 생성 중 서버 오류가 발생했습니다.";
+      alert(message || "폰트 생성 중 서버 오류가 발생했습니다.");
       setIsProcessing(false);
     }
   };
@@ -99,12 +105,12 @@ export default function AiFontPage() {
             )}
           </div>
           <h1 className="text-2xl font-bold mb-4 text-gray-800">
-            {progress === 100 ? "폰트 생성 완료!" : "AI가 폰트를 생성하고 있어요"}
+            {progress === 100 ? "폰트 생성 완료" : "AI가 폰트를 생성하고 있어요"}
           </h1>
           <p className="text-gray-500 mb-8">
             {progress === 100
               ? "결과 페이지로 이동합니다."
-              : "64자 샘플을 분석하여 2,350자 전체를 생성 중입니다. 잠시만 기다려주세요. CPU 환경에서는 시간이 오래 걸릴 수 있습니다."}
+              : "38자 샘플을 분석해 DM-Font로 글자를 생성 중입니다. CPU 환경에서는 시간이 오래 걸릴 수 있습니다."}
           </p>
           <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden mb-3">
             <div
@@ -125,11 +131,11 @@ export default function AiFontPage() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">AI 폰트 생성</h1>
             <p className="text-gray-500 mt-2">
-              2350자 템플릿과 같은 형식의 샘플지에 64자만 작성하면 AI가 전체 글자를 생성합니다.
+              DM-Font가 38자 손글씨 샘플을 참고해 나머지 글자를 생성합니다.
             </p>
           </div>
           <span className="mt-1 px-3 py-1 bg-brand-100 text-brand-600 text-xs font-bold rounded-full">
-            AI
+            DM-Font
           </span>
         </div>
 
@@ -148,7 +154,8 @@ export default function AiFontPage() {
           <div>
             <h3 className="font-bold text-brand-900 mb-1">AI 생성 안내</h3>
             <p className="text-sm text-brand-700/80 leading-relaxed">
-              업로드한 샘플지는 네 모서리 마커로 보정한 뒤, 11x17 격자의 앞 64칸만 추출해 AI 모델에 전달합니다.
+              업로드한 샘플지는 네 모서리 마커로 보정한 뒤, 11x17 격자의 앞 38칸을
+              `ref_chars.json` 순서대로 잘라 DM-Font에 전달합니다.
             </p>
           </div>
         </div>
@@ -156,16 +163,16 @@ export default function AiFontPage() {
         <div className="bg-white p-10 rounded-3xl shadow-sm border border-gray-100 mb-6">
           <div className="flex items-center gap-2 mb-4 text-brand-600 font-bold">
             <Info size={18} />
-            <span>작성할 64자</span>
+            <span>작성할 38자</span>
           </div>
           <p className="text-xl font-medium text-gray-800 mb-5 leading-9 break-keep">
             {SAMPLE_CHARS}
           </p>
           <ul className="space-y-2 text-sm text-gray-500 mb-8">
-            <li>• 템플릿은 2350자 수기 템플릿과 같은 마커/격자 형식입니다.</li>
-            <li>• 왼쪽 위 첫 칸부터 오른쪽으로, 줄이 바뀌면 다음 줄 왼쪽부터 순서대로 작성하세요.</li>
-            <li>• 64자 이후의 빈 칸은 작성하지 않아도 됩니다.</li>
-            <li>• 검은색 펜으로 진하게 쓰고, 촬영할 때 네 모서리 마커가 모두 보이게 해주세요.</li>
+            <li>템플릿의 마커와 격자 형식이 보이도록 촬영해 주세요.</li>
+            <li>왼쪽 위 첫 칸부터 오른쪽으로, 줄이 바뀌면 다음 줄 왼쪽부터 작성해 주세요.</li>
+            <li>38자 이후의 빈 칸은 작성하지 않아도 됩니다.</li>
+            <li>글자는 진하게 쓰고, 촬영할 때 네 모서리 마커가 모두 보이게 해 주세요.</li>
           </ul>
           <div className="flex flex-wrap gap-3">
             <a
@@ -221,7 +228,7 @@ export default function AiFontPage() {
               className="border-2 border-dashed border-gray-200 rounded-3xl py-20 flex flex-col items-center justify-center cursor-pointer hover:border-brand-300 hover:bg-brand-50 transition group"
             >
               <UploadCloud size={48} className="text-gray-300 mb-4 group-hover:text-brand-400" />
-              <p className="text-gray-600 font-medium mb-1">64자 샘플지를 촬영한 이미지를 업로드하세요</p>
+              <p className="text-gray-600 font-medium mb-1">38자 샘플지를 촬영한 이미지를 업로드하세요</p>
               <p className="text-gray-400 text-xs">최대 20MB</p>
             </div>
           )}

@@ -21,7 +21,6 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/autobiography")
-@CrossOrigin(origins = "http://localhost:3000")
 public class AutobiographyController {
 
     private final ObjectMapper objectMapper = new ObjectMapper();

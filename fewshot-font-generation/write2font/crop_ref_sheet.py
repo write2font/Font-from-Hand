@@ -323,7 +323,7 @@ def copy_named_images(files: list[Path], out_dir: Path, chars: list[str], size: 
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Crop a 64-character AI reference sheet into write2font PNG inputs.")
+    parser = argparse.ArgumentParser(description="Crop a DM-Font reference sheet into write2font PNG inputs.")
     parser.add_argument("--input", required=True, help="Input image file or directory")
     parser.add_argument("--out-dir", required=True, help="Output directory, usually write2font/png/<font-key>")
     parser.add_argument("--ref-chars", default="write2font/ref_chars.json")
@@ -350,7 +350,9 @@ def main() -> None:
         return
 
     if len(files) != 1:
-        raise RuntimeError("expected one marked reference sheet or 64 images named by character")
+        raise RuntimeError(
+            f"expected one marked reference sheet or {len(chars)} images named by character"
+        )
 
     crop_sheet(files[0], out_dir, chars, args.rows, args.cols, args.size, args.padding, args.cell_margin)
 

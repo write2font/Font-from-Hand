@@ -1,4 +1,6 @@
 .git
+.env
+**/.env
 **/.gradle
 **/build
 **/node_modules
@@ -17,3 +19,27 @@ fewshot-font-generation/write2font/pth
 fewshot-font-generation/**/*.pth
 fewshot-font-generation/**/*.pt
 fewshot-font-generation/**/*.ckpt
+
+# DM-Font is the only AI model used by Font-from-Hand at runtime.
+# Keep the full vendored source in git, but avoid copying unused model families
+# and research/training artifacts into Docker build contexts.
+fewshot-font-generation/.github
+fewshot-font-generation/docs
+fewshot-font-generation/data_example
+fewshot-font-generation/data/chn
+fewshot-font-generation/LF
+fewshot-font-generation/MX
+fewshot-font-generation/FUNIT
+fewshot-font-generation/cfgs/LF
+fewshot-font-generation/cfgs/MX
+fewshot-font-generation/cfgs/FUNIT
+fewshot-font-generation/cfgs/train
+fewshot-font-generation/cfgs/evaluator
+fewshot-font-generation/evaluator
+fewshot-font-generation/*.ipynb
+fewshot-font-generation/*_LF.ipynb
+fewshot-font-generation/*_MX.ipynb
+fewshot-font-generation/*_FUNIT.ipynb
+fewshot-font-generation/train_*.py
+fewshot-font-generation/train_and_inference.ipynb
+fewshot-font-generation/ttf_to_png.ipynb

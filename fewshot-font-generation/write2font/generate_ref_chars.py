@@ -1,28 +1,34 @@
-import os
+from __future__ import annotations
+
+import argparse
 import json
 import shutil
+from pathlib import Path
 
-folder_path = "D:\projects\write2font/png"
-json_path = "D:\projects\write2font/ref_chars.json"
-backup_path = "D:\projects\write2font/ref_chars_backup.json"
 
-# 1. 안전을 위해 기존 JSON 파일 백업
-if os.path.exists(json_path):
-    shutil.copy(json_path, backup_path)
-    print("💾 기존 JSON 파일을 'ref_chars_backup.json'으로 백업했습니다.")
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Generate a character JSON file from PNG filenames.")
+    parser.add_argument("--png-dir", default="write2font/png", help="Directory containing <char>.png files")
+    parser.add_argument("--out", default="write2font/ref_chars.json", help="JSON file to write")
+    parser.add_argument("--backup", action="store_true", help="Back up the existing output file before writing")
+    args = parser.parse_args()
 
-# 2. 폴더에서 실제 파일명(글자) 추출
-file_chars = []
-for filename in os.listdir(folder_path):
-    if filename.lower().endswith('.png'):
-        char = filename.split('.')[0]
-        file_chars.append(char)
+    png_dir = Path(args.png_dir)
+    out_path = Path(args.out)
 
-# 보기 좋게 정렬
-file_chars.sort()
+    if not png_dir.is_dir():
+        raise FileNotFoundError(f"PNG directory not found: {png_dir}")
 
-# 3. 추출한 글자 목록을 JSON 파일로 저장 (자소 분리된 상태 그대로)
-with open(json_path, 'w', encoding='utf-8') as f:
-    json.dump(file_chars, f, ensure_ascii=False, indent=4)
+    if args.backup and out_path.exists():
+        backup_path = out_path.with_name(f"{out_path.stem}_backup{out_path.suffix}")
+        shutil.copy(out_path, backup_path)
+        print(f"Backed up existing JSON to {backup_path}")
 
-print(f"✅ 완료! 총 {len(file_chars)}개의 실제 파일명으로 JSON 파일이 업데이트되었습니다.")
+    chars = sorted(path.stem for path in png_dir.iterdir() if path.suffix.lower() == ".png")
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(chars, ensure_ascii=False, indent=4) + "\n", encoding="utf-8")
+    print(f"Wrote {len(chars)} characters to {out_path}")
+
+
+if __name__ == "__main__":
+    main()
